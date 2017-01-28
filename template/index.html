@@ -1,0 +1,26 @@
+<h1>Welcome</h1>
+<label>Are you the DM?</label>
+<a href="./" name="yes">Yes</a>
+<a href="./" name="no">No</a>
+<script type="application/javascript">
+    onEvent(document.querySelector("a[name='yes']"), "click", function(event) {
+        replaceBody("setup", null, { is_dm : 1}, { method : "POST" });
+        event.preventDefault();
+        return false;
+    });
+    
+    onEvent(document.querySelector("a[name='no']"), "click", function(event) {
+        replaceBody("setup", null, { is_dm : 0 }, { method : "POST" });
+        event.preventDefault();
+        return false;
+    });
+    
+    onEvent(window.socket, "message", function(event) {
+        var data, el;
+        data = JSON.parse(event.data);
+        if (data["dm_set"]) {
+            replaceBody("setup", null, {is_dm: 0}, { method : "POST" });
+        }
+    });
+
+</script>

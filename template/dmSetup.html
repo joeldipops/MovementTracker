@@ -1,0 +1,22 @@
+<nav>
+    <button name="reset">Back to Start</button>
+</nav>
+<h2>You are god. Hooray.</h2>
+<fieldset>
+    <label>Your Name</label><input type="text" name="playerName" />
+</fieldset>
+<script type="application/javascript">
+onEvent(document.querySelector("button[name='reset']"), "click", function() {
+    if (window.sessionId) {
+        sendHttpRequest("reset/" + window.sessionId, "POST")
+        .then(function(res) {
+            replaceBody("home", document.documentElement);
+        })
+    .   catch(function(res) {
+            console.error(res.status, res.responseText);
+        });
+    } else {
+        replaceBody("home", document.documentElement);    
+    }
+});
+</script>
