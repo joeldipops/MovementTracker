@@ -1,3 +1,69 @@
+var DEFAULT,
+onEvent, closePage, newPromise;
+
+DEFAULT = false;
+
+var a = function() {
+    var _pageEvents, _pendingPromises;
+    _pageEvents = [];
+    _pendingCancelFlags = [];
+
+    /**
+     * Keeps track of page-level events so they can be unbound later. 
+     * @param {EventTarget} target to bind event.
+     * @param {string} event name of event.
+     * @param {function} callback when event is fired.
+     */
+    onEvent = function(target, event, handler) {
+        target.addEventListener(event, handler);
+        _pageEvents.push(target.removeEventListener.bind(target, event, handler));
+    };
+    
+    /**
+     * Cleans up a page when it is no longer needed.
+     */
+    closePage = function() {
+       var i;
+       for(i = 0; i < _pageEvents.length; i++) {
+           _pageEvents[i]();
+       }
+       _pageEvents.length = 0;
+       for (i = 0; i < _pendingCancelFlags.length; i++) {
+           _pendingCancelFlags[i].value = true;
+       }
+       _pendingCancelFlags.length = 0;
+    }
+    
+    /**
+     * Keeps track of pending promises so they can be rejected when no longer needed.
+     * @param {function} callback The promise callback
+     * @returns {Promise} a promise generated from the callback.
+     */
+    newPromise = function(callback) {
+        var innerPromise, resultPromise, cancelFlag;
+        // When cancelled, promise will no longer fire.
+        cancelFlag = { value : false };
+        _pendingCancelFlags.push(cancelFlag);
+
+        innerPromise = new Promise(callback);
+        resultPromise = new Promise(function(resolve, reject) {
+            // Fire public promise in response to inner promise, unless cancelled.
+            innerPromise
+            .then(function() {
+                if (!cancelFlag.value) {
+                    resolve.apply(this, arguments);
+                }
+            })
+            .catch(function() {
+                if (!cancelFlag.value) {
+                    reject.apply(this, arguments);
+                }
+            });
+        });
+        return resultPromise;
+    };
+}(); 
+
 /**
  * Sends a http request and passes the results to a callback via promises.
  * @param {string} url The target of the request.
@@ -36,7 +102,7 @@ var sendHttpRequest = function(url, method, data, options) {
         }
     };
     
-    return new Promise(onPromise);   
+    return newPromise(onPromise);   
 };
 
 /**
@@ -71,32 +137,6 @@ var replaceBody = function(url, container, data, options) {
        console.error(result.responseText);
    });  
 };
-
-var onEvent, closePage;
-var a = function() {
-    /**
-     * Keeps track of page-level events so they can be unbound later. 
-     * @param {EventTarget} target to bind event.
-     * @param {string} event name of event.
-     * @param {function} callback when event is fired.
-     */
-    var pageEvents = [];
-    onEvent = function(target, event, handler) {
-        target.addEventListener(event, handler);
-        pageEvents.push(target.removeEventListener.bind(target, event, handler));
-    };
-    
-    /**
-     * Cleans up a page when it is no longer needed.
-     */
-    closePage = function() {
-       var i = 0;
-       for(i; i < pageEvents.length; i++) {
-           pageEvents[i]();
-       }
-       pageEvents.length = 0;
-    }
-}(); 
 
 /**
  * Converts a pojo to a url query string.

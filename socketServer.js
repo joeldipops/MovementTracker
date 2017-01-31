@@ -1,13 +1,14 @@
 var websocket,
 _onRequest, _onMessage, _onClose,
 _onNoConnections,
-_count, _connections, _server,
+_count, _connections, _server, _cache,
 shared;
 
 websocket = require("websocket");
 
 _count = 0;
 _connections = {};
+_cache = {};
 
 /**
  * Cleans up a closed connection.
@@ -51,13 +52,18 @@ shared = {
     /**
      * Sends a message string to all clients.
      * @param {string} message The message.
+     * @param {array of number} excluding List of client ids that should not receive the message.     
      */
-    broadcastMessage : function(message) {
+    broadcastMessage : function(message, excluding) {
         var i;
         for (i in _connections) {
             if (!_connections.hasOwnProperty(i)) {
                 continue;
             }
+            // ignore excluded connections.
+            if (excluding && excluding.indexOf(i) >= 0) {
+                continue;
+            }            
             
             _connections[i].sendUTF(message);
         }
@@ -65,9 +71,10 @@ shared = {
     /**
      * Sends an object to all clients as JSON.
      * @param {object} json The object.
+     * @param {array of number} excluding List of client ids that should not receive the message.
      */
-    broadcastJSON : function(json) {
-        return this.broadcastMessage(JSON.stringify(json));
+    broadcastJSON : function(json, excluding) {
+        return this.broadcastMessage(JSON.stringify(json), excluding);
     },
     
     /**
@@ -83,6 +90,20 @@ shared = {
         for (i = 0; i < ids.length; i++) {
             _connections[ids[i]].sendUTF(JSON.stringify(json));
         }
-    } 
+    },
+    
+    /**
+     * Caches data against a connection.
+     * @param {number} id of the connection.
+     * @param {object|undefined} hash to add to the cache.
+     * @returns {object} the cached object.
+     */
+    cache: function(id, data) {
+        if (data) {
+            _cache[id] = Object.assign(_cache[id] || {}, data);
+        }
+        return _cache[id];
+    }
 };
+
 module.exports = shared;

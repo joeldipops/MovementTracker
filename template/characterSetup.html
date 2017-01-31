@@ -2,4 +2,13 @@
     <legend>Your Character</legend>
     <label>Your Name</label><input type="text" name="playerName" />
     <label>Charater's Name</label><input type="text" name="characterName" />
+    <button name="submit">Next</button>
 </fieldset>
+<script type="application/javascript">
+onEvent(document.querySelector("button[name='submit']"), "click", function() {
+    sendHttpRequest("player", "PUT", {
+        player_name : document.querySelector("input[name='playerName']").value,
+        character_name : document.querySelector("input[name='characterName']").value
+    });
+});
+</script>

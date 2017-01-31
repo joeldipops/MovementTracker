@@ -20,28 +20,77 @@ server.use(restify.bodyParser());
 server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
-
-// TODO - Change to POST
-server.post("/page/setup", postSetup); 
+server.post("/page/setup", postSetup);
+server.put("/player", putPlayer);
+server.get("/page/play", function(req, res) {res.end();});
 
 server.post(/reset\/[0-9]+/,postReset); 
 
+
 /** 
- * Convenience method to clear out db for testing.
+ * Convenience for clearing out db after testing.
  */
 function resetSession(done) {
-    db.runQuery("DELETE FROM WebSession;", [], done || function(){});
+    db.runQuery(`
+DELETE FROM Player;
+DELETE FROM WebSession;
+    `, [], done || function(){});
 };
-socketServerControl.setUpServer(server, resetSession); 
 
+socketServerControl.setUpServer(server, resetSession); 
+process.on("SIGINT", function () {
+    console.log("Terminating...");
+    try {
+        console.log("Closing server...");
+        server.close();
+        console.log("Cleaning up data...");
+        resetSession(process.exit.bind(process, 0));            
+    } catch (error) {
+        console.error("Error in shutdown...");
+        console.error(JSON.stringify(error));
+        process.exit(70); // internal software error;
+    }
+});
+
+/**
+ * Creates or updates a player.
+ */
+function putPlayer(req, res) {
+    var dbParams, query;
+    dbParams = [
+        req.body.session_id,
+        req.body.player_name,
+        req.body.character_name,
+        !!req.body.is_dm    
+    ];
+
+    if(req.body.player_id) {
+        query = queries.updatePlayer;
+        dbParams.unshift(req.body.player_id);
+    } else {
+        query = queries.createPlayer;
+    }
+
+    db.runQuery(query, dbParams, function(result) {
+        if (!result) {
+            return serveError(res);
+        }
+        socketServerControl.cache(req.body.socket_id, { player_id : result.rows[0].playerid });
+        res.writeHead(200);
+        res.end();
+    });   
+};
+
+/**
+ * Resets the session
+ */
 function postReset(req, res) {
     var path, sessionId;
     path = url.parse(req.url).path;
     sessionId = path.substring(path.lastIndexOf("/")+1, path.length);
     db.runQuery(queries.deleteSession, [sessionId], function(result) {
         if (!result) {
-            res.writeHead(500);
-            res.end();
+            res.serveError(res);
         } else {
             res.writeHead(200);
             res.end();
@@ -65,9 +114,13 @@ function postSetup(req, res) {
                     socketServerControl.broadcastJSON({ 
                         dm_set : true,
                         session_id : result.rows[0].websessionid
-                    });
+                    }, [params.socket_id]);
                     return serveHtml(res, fs.readFileSync("template/dmSetup.html"), "Setup Game");       
                 } else {
+                    socketServerControl.broadcastJSON({ 
+                        dm_set : false,
+                        session_id : result.rows[0].websessionid
+                    }, [params.socket_id]);                
                     return serveHtml(res, fs.readFileSync("template/characterSetup.html"), "Setup Character");                
                 }   
             });
@@ -75,14 +128,13 @@ function postSetup(req, res) {
             if (isDm) {
                 if(result.rows[0].isdmset) {
                     // There's already a DM.
-                    res.writeHead(409);
-                    res.end();
+                    return serveError(res, "DM Set", 409);
                 } else {
                     // Only one can be DM, so broadcast to remove the option for others.
                     socketServerControl.broadcastJSON({ 
                         dm_set : true,
                         session_id : result.rows[0].websessionid
-                    });
+                    }, [params.socket_id]);
                     return serveHtml(res, fs.readFileSync("template/dmSetup.html"), "Setup Game");               
                 }
            } else {
@@ -101,9 +153,7 @@ function getStaticFile(req, res) {
     
     fs.readFile(path, function(err, data) {
         if (err) {
-            res.writeHead(404)
-            res.write(path + " not found");
-            return res.end();
+            return serveError(res, path + " not found", 404);
         }
         res.writeHead(200, { "Content-Type" : estimateContentType(path) });
         res.write(data);
@@ -115,12 +165,22 @@ function getStaticFile(req, res) {
  * Serves the index page.
  */
 function getIndex(req, res) {
-    var content, html;
+    var content, html, sessionScript;
     db.runQuery(queries.getCurrentSession, null, function(result) {
-        if (!result.rows.length || !result.rows[0].isdmset ) {
+        if (!result.rows.length) {
             content = fs.readFileSync("template/index.html");
         } else {
-            content = fs.readFileSync("template/characterSetup.html");
+            // Ensure all browsers are on the same session. (For now)
+            sessionScript = `
+<script type="application/javascript">window.sessionId = ${result.rows[0].websessionid};</script>
+            `;
+
+            if (!result.rows[0].isdmset ) {
+                content = fs.readFileSync("template/index.html");
+            } else {
+                content = fs.readFileSync("template/characterSetup.html");
+            }
+            content += sessionScript;
         }
         html = mustache.render(body.toString(), {
             content: content,
@@ -138,6 +198,11 @@ function getParams(req) {
     return qs.parse(url.parse(req.url).query);
 }
 
+/**
+ * Selects the mime type of a file to be served based on its name.
+ * @param {string} fileName The name of the file including extension.
+ * @returns {string} The mime type.
+ */
 function estimateContentType(fileName) {
     var ext = fileName.match(/.+\.(.*)/)[1];
     if (!ext) {
@@ -149,7 +214,7 @@ function estimateContentType(fileName) {
         case "js": return "application/javascript";
         default: return "text/plaintext";
     }
-}
+};
 
 /**
  * Sends a html response
@@ -161,7 +226,19 @@ function serveHtml(res, content) {
     res.writeHead(200, { "Content-Type" : "text/html" });
     res.write(content);
     return res.end();
-}  
+};
+
+/**
+ * Sends an error response
+ * @param {ServerResponse} response object.
+ * @param {string} message Error message
+ * @param {number|undefined} code HTTP Status code. Defaults to 500
+ */
+function serveError(res, message, code) {
+    res.writeHead(code || 500, { "Content-Type" : "text/plaintext" });
+    res.write(message);
+    return res.end();
+};
 
 server.listen(config.PORT, function() {
     console.log("Listening on port " + config.PORT);
