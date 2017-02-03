@@ -75,7 +75,6 @@ shared = {
             if (excluding && excluding.indexOf(i) >= 0) {
                 continue;
             }            
-            console.log(message);
             _connections[i].sendUTF(message);
         }
     },

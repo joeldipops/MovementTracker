@@ -3,16 +3,34 @@
 <fieldset id="dmOptions">
     <legend>DM the game</legend>
     <div class="hidden">DM Already Set</div>
-    <button name="start" data-is_dm="true">Start</button>
+    <button name="start" data-is_dm>Start</button>
 </fieldset>
 <fieldset id="playerOptions">
     <legend>OR Set up your character</legend>
     <label>Character's Name</label><input type="text" name="characterName" />
-    <button name="start" data-is_dm="false">Start</button>
+    <button name="start">Start</button>
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
-    var onClick, onMessage, buttons, i;
+    var onClick, onMessage,
+        hideDmButton, buttons, i;
+        
+    hideDmButton = function() {
+        el = document.querySelector("#dmOptions > button[name='start']");
+        el.classList.add("hidden");
+
+        el.parentNode.querySelector("div.hidden")
+        .classList.remove("hidden");
+        window.socket.removeEventListener("message", onMessage);
+    };
+
+    sendHttpRequest("session", "GET")
+    .then(function(result) {
+        var data = JSON.parse(result.responseText);
+        if (data.is_dm_set) {
+            hideDmButton();
+        }
+    });
     
     /**
      * Calls server to set up a session and a player.
@@ -23,7 +41,7 @@
             player_name : document.querySelector("input[name='playerName']").value,
         };
 
-        isDm = event.currentTarget.getAttribute("data-is_dm") === "true";
+        isDm = event.currentTarget.hasAttribute("data-is_dm");
         if (isDm) {
             body.is_dm = true;
         } else {
@@ -48,7 +66,7 @@
 
     buttons = document.querySelectorAll("button[name='start']");
     for (i = 0; i < buttons.length; i++) {
-        onEvent(document.querySelector("button[name='start']"), "click", onClick);
+        onEvent(buttons[i], "click", onClick);
     }
 
     /**
@@ -58,14 +76,8 @@
         var data, el;
         data = JSON.parse(event.data);
         if (data["dm_add"]) {
-            el = document.querySelector("#dmOptions > button[name='start']");
-            el.classList.add("hidden");
-
-            el.parentNode.querySelector("div.hidden")
-            .classList.remove("hidden");
-            window.socket.removeEventListener("message", onMessage);
+            hideDmButton();
         }
-
     };
     onEvent(window.socket, "message", onMessage);
 })();

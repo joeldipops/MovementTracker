@@ -21,11 +21,11 @@ server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
 server.get("/page/play", function(req, res) {res.end();});
-server.post("session", postSession);
-server.del(/session\/[0-9]+/,deleteSession); 
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.get(/session\/[0-9]+\/players/, getPlayerList);
-
+server.post("session", postSession);
+server.get(/session(\/[0-9]+)?/, getSession);
+server.del(/session\/[0-9]+/,deleteSession); 
 
 /** 
  * Convenience for clearing out db after testing.
@@ -100,6 +100,21 @@ function putPlayer(req, res) {
         res.writeHead(200);
         res.end();
     });   
+};
+
+function getSession(req, res) {
+    db.runQuery(queries.getCurrentSession, null, function(result) {
+        if (!result) {
+            return serveError(res);
+        }
+        if (!result.rows[0]) {
+            return serveError(res, "", 404);
+        }
+        return serveJSON(res, {
+            session_id : result.rows[0].websessionid,
+            is_dm_set : result.rows[0].isdmset
+        });
+    });
 };
 
 /**
@@ -210,11 +225,7 @@ function getIndex(req, res) {
 <script type="application/javascript">window.sessionId = ${result.rows[0].websessionid};</script>
             `;
 
-            if (!result.rows[0].isdmset ) {
-                content = fs.readFileSync("template/index.html");
-            } else {
-                content = fs.readFileSync("template/characterSetup.html");
-            }
+            content = fs.readFileSync("template/index.html");
             content += sessionScript;
         }
         html = mustache.render(body.toString(), {

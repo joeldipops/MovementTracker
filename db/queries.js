@@ -14,7 +14,7 @@ WHERE WebSessionId = $1
     getCurrentSession: `
 SELECT
     S.WebSessionId,
-    bool_or(P.IsDm)
+    bool_or(P.IsDm) AS IsDmSet
 FROM WebSession S
     LEFT OUTER JOIN Player P
     ON P.WebSessionId = S.WebSessionId
