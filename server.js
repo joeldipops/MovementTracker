@@ -20,11 +20,11 @@ server.use(restify.bodyParser());
 server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
-server.post("/page/setup", postSetup);
-server.put("/player", putPlayer);
 server.get("/page/play", function(req, res) {res.end();});
-
-server.post(/reset\/[0-9]+/,postReset); 
+server.post("session", postSession);
+server.del(/session\/[0-9]+/,deleteSession); 
+server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
+server.get(/session\/[0-9]+\/players/, getPlayerList);
 
 
 /** 
@@ -34,10 +34,10 @@ function resetSession(done) {
     db.runQuery(`
 DELETE FROM Player;
 DELETE FROM WebSession;
-    `, [], done || function(){});
+    `, [], typeof done === "function" ? done : function(){});
 };
 
-socketServerControl.setUpServer(server, resetSession); 
+socketServerControl.setUpServer(server, removePlayer, resetSession); 
 process.on("SIGINT", function () {
     console.log("Terminating...");
     try {
@@ -56,26 +56,47 @@ process.on("SIGINT", function () {
  * Creates or updates a player.
  */
 function putPlayer(req, res) {
-    var dbParams, query;
+    var dbParams, query, path, sessionId;
+
+    path = url.parse(req.url).pathname;
+    sessionId = getEntityId("session", path);
+    playerId = getEntityId("player", path) || req.body.player_id || 
+        (req.body.socket_id && socketServerControl.cache(req.body.socket_id) && socketServerControl.cache(req.body.socket_id).player_id);
+
     dbParams = [
-        req.body.session_id,
+        sessionId,
         req.body.player_name,
         req.body.character_name,
         !!req.body.is_dm    
     ];
 
-    if(req.body.player_id) {
+    if(playerId) {
         query = queries.updatePlayer;
-        dbParams.unshift(req.body.player_id);
+        dbParams.unshift(playerId);
     } else {
         query = queries.createPlayer;
     }
 
     db.runQuery(query, dbParams, function(result) {
+        var player, message;
+        message = {};
         if (!result) {
             return serveError(res);
         }
-        socketServerControl.cache(req.body.socket_id, { player_id : result.rows[0].playerid });
+        player = socketServerControl.cache(req.body.socket_id, { 
+            player_id : result.rows[0].playerid,
+            socket_id : req.body.socket_id,
+            is_dm :!!req.body.is_dm
+        });
+        if (!playerId) {
+            message[req.body.is_dm ? "dm_add" : "player_add"] = {
+                player_name: req.body.player_name,
+                character_name: req.body.character_name,
+                player_id: player.player_id,
+                session_id: sessionId
+            };
+            socketServerControl.broadcastJSON(message);
+        }
         res.writeHead(200);
         res.end();
     });   
@@ -84,13 +105,13 @@ function putPlayer(req, res) {
 /**
  * Resets the session
  */
-function postReset(req, res) {
+function deleteSession(req, res) {
     var path, sessionId;
-    path = url.parse(req.url).path;
-    sessionId = path.substring(path.lastIndexOf("/")+1, path.length);
+    path = url.parse(req.url).pathname;
+    sessionId = getEntityId("session", path);
     db.runQuery(queries.deleteSession, [sessionId], function(result) {
         if (!result) {
-            res.serveError(res);
+            serveError(res);
         } else {
             res.writeHead(200);
             res.end();
@@ -98,58 +119,71 @@ function postReset(req, res) {
     });
 };
 
-/**
- * Serves the setup page.  If a DM has been chosen, set this and broadcast.
- */
-function postSetup(req, res) {
-    var params, isDm;
+function getPlayerList(req, res) {
+    var path, sessionId, params;
+    path = url.parse(req.url).pathname;
+    sessionId = parseInt(getEntityId("session", path), 10);
     params = getParams(req);
-    isDm = !!parseInt(params.is_dm, 10);
     
+    db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.is_dm || null)], function(result) {
+        var i, body;
+        if (!result) {
+            return serveError(res);
+        }
+        body = { players : [] };
+        for (i = 0; i < result.rows.length; i++) {
+            
+            body.players.push({
+                player_id: result.rows[i].playerid,
+                player_name: result.rows[i].playername,
+                character_name: result.rows[i].charactername,
+                is_dm: result.rows[i].isdm
+            });
+        }
+        
+        res.writeHead(200, { "Content-Type" : "application/json" });
+        
+        res.write(JSON.stringify(body));
+        res.end();
+    });
+};
+
+/**
+ * Creates a session if one doesn't exist.
+ */
+function postSession(req, res) {
     db.runQuery(queries.getCurrentSession, null, function(result) {
+        if (!result) {
+             return serveError();
+        }
+
         if (!result.rows.length) {
-            db.runQuery(queries.createSession, [isDm], function(result) {
-                if (isDm) {
-                    // Only one can be DM, so broadcast to remove the option for others.
-                    socketServerControl.broadcastJSON({ 
-                        dm_set : true,
-                        session_id : result.rows[0].websessionid
-                    }, [params.socket_id]);
-                    return serveHtml(res, fs.readFileSync("template/dmSetup.html"), "Setup Game");       
-                } else {
-                    socketServerControl.broadcastJSON({ 
-                        dm_set : false,
-                        session_id : result.rows[0].websessionid
-                    }, [params.socket_id]);                
-                    return serveHtml(res, fs.readFileSync("template/characterSetup.html"), "Setup Character");                
-                }   
+            db.runQuery(queries.createSession, null, function(result) {
+                var body;
+                if (!result || !result.rows[0]) {
+                    return serveError();
+                }
+                body = { session_id: result.rows[0].websessionid };
+                socketServerControl.broadcastJSON(body);
+                return serveJSON(res, body);
             });
         } else {
-            if (isDm) {
-                if(result.rows[0].isdmset) {
-                    // There's already a DM.
-                    return serveError(res, "DM Set", 409);
-                } else {
-                    // Only one can be DM, so broadcast to remove the option for others.
-                    socketServerControl.broadcastJSON({ 
-                        dm_set : true,
-                        session_id : result.rows[0].websessionid
-                    }, [params.socket_id]);
-                    return serveHtml(res, fs.readFileSync("template/dmSetup.html"), "Setup Game");               
-                }
-           } else {
-               return serveHtml(res, fs.readFileSync("template/characterSetup.html"), "Setup Character");
-           }
-       }
+            res.writeHead(200);
+            res.end();
+        }
     });
 }
+
+function removePlayer(data) {
+    db.runQuery(queries.deletePlayer, [data.player_id], function() {});
+};
 
 /**
  * Serves a static file in the public directory.
  */
 function getStaticFile(req, res) {
     var path, regex, extension;
-    path = "." + url.parse(req.url).path;
+    path = "." + url.parse(req.url).pathname;
     
     fs.readFile(path, function(err, data) {
         if (err) {
@@ -167,6 +201,7 @@ function getStaticFile(req, res) {
 function getIndex(req, res) {
     var content, html, sessionScript;
     db.runQuery(queries.getCurrentSession, null, function(result) {
+        socialContent = fs.readFileSync("template/social.html");
         if (!result.rows.length) {
             content = fs.readFileSync("template/index.html");
         } else {
@@ -184,6 +219,7 @@ function getIndex(req, res) {
         }
         html = mustache.render(body.toString(), {
             content: content,
+            social: socialContent
         });   
        return serveHtml(res, html);         
     });
@@ -228,6 +264,12 @@ function serveHtml(res, content) {
     return res.end();
 };
 
+function serveJSON(res, content) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.write(JSON.stringify(content));
+    return res.end();
+};
+
 /**
  * Sends an error response
  * @param {ServerResponse} response object.
@@ -236,8 +278,18 @@ function serveHtml(res, content) {
  */
 function serveError(res, message, code) {
     res.writeHead(code || 500, { "Content-Type" : "text/plaintext" });
-    res.write(message);
+    res.write(message || "");
     return res.end();
+};
+
+function getEntityId(entityName, path) {
+    var regex, result;
+    regex = new RegExp("^.*\/" + entityName + "\/([0-9]+)\/.*$");
+    result = regex.exec(path);
+    if (!result) {
+        return;
+    }
+    return parseInt(result[1], 10);
 };
 
 server.listen(config.PORT, function() {

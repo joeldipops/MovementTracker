@@ -102,7 +102,12 @@ var sendHttpRequest = function(url, method, data, options) {
         }
     };
     
-    return newPromise(onPromise);   
+    // Don't cancel promise on close.
+    if (options.isPersistent) {
+        return new Promise(onPromise);
+    } else {
+        return newPromise(onPromise);   
+    }
 };
 
 /**
@@ -124,7 +129,7 @@ var evaluateScripts = function(container) {
  * @returns {Promise} when complete.. 
  */
 var replaceBody = function(url, container, data, options) {
-   container = container || document.body;
+   container = container || document.getElementById("main");
    url = data ? url + toQueryString(data) : url;
    url = "page/" + url;
    closePage();
@@ -134,7 +139,11 @@ var replaceBody = function(url, container, data, options) {
        evaluateScripts(container);
    })
    .catch(function(result) {
-       console.error(result.responseText);
+       if (result) {
+           console.error(result.responseText);
+       } else {
+           console.trace();
+       }
    });  
 };
 
@@ -155,7 +164,7 @@ function toQueryString(obj) {
 }
 
 // Sets up a websocket connection with the server.
-var g = function(socketAddress) {
+var socketControl = function(socketAddress) {
     var socket, onSendMessage, onReceiveMessage;
     socket = new WebSocket(socketAddress, "echo-protocol");
     
@@ -173,7 +182,7 @@ var g = function(socketAddress) {
         if (data["session_id"]) {
             window.sessionId = data.session_id;
         }
-        if (data["socket_id"]) {
+        if (!isNaN(data["socket_id"])) {
             window.socketId = data.socket_id;
         }
     };

@@ -6,9 +6,12 @@
 </fieldset>
 <script type="application/javascript">
 onEvent(document.querySelector("button[name='submit']"), "click", function() {
-    sendHttpRequest("player", "PUT", {
+    if (!window.socketId) {
+        alert ("YTF YOU HAVE NO SOCKET?!?!?!");
+        }
+    sendHttpRequest("session/" + window.sessionId + "/player", "PUT", {
         player_name : document.querySelector("input[name='playerName']").value,
-        character_name : document.querySelector("input[name='characterName']").value
+        character_name : document.querySelector("input[name='characterName']").value,
     });
 });
 </script>

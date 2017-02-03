@@ -1,0 +1,110 @@
+<h2>Ready Players</h2>
+<div>Waiting for DM</div>
+<ul></ul>
+<script type="application/javascript">
+(function socialScript() {
+    var onReceiveMessage, onClose, 
+    addPlayer, removePlayer, addDM, removeDM;
+    
+    /**
+     * Cleans up bound events.
+     */
+    onClose = function() {
+        window.socket.removeEventListener("message", onReceiveMessage);
+    };
+
+    /**
+     * Handles messages received through the web socket.
+     */
+    onReceiveMessage = function(event) {
+        var data, el;
+        data = JSON.parse(event.data);
+        if (data["player_add"]) {
+            addPlayer(data["player_add"]);    
+        }
+        if (data["player_remove"]) {
+            removePlayer(data["player_remove"]);
+        }
+        if (data["dm_add"]) {
+            addDM(data["dm_add"]); 
+        }
+        if (data["dm_remove"]) {
+            removeDM();
+        }
+        if (data["session_id"]) {
+            refreshList();
+        }
+        
+    };
+    
+    addDM = function(data) {
+        var el = document.querySelector("#social > div");
+        el.innerHTML = "DM is " + data.player_name;
+    };
+    
+    removeDM = function(data) {
+        var el = document.querySelector("#social > div");
+        el.innerHTML = "Waiting for DM";     
+    };
+    
+    removePlayer = function(data) {
+        var li;
+        if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
+            li.parentElement.removeChild(li);
+        }
+    };
+    
+    removeAll = function() {
+        var list = document.querySelector("#social > div > ul")
+        while (list.firstChild) {
+            list.removeChild(list.firstChild);
+        }
+    };
+    
+    addPlayer = function(data) {
+        var li;
+        // Don't add same player more than once.
+        if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
+            return;
+        }
+        li = document.createElement("li");
+        li.innerHTML = data.character_name;
+        li.setAttribute("data-id", data.player_id);
+        document.querySelector("#social > ul")
+        .appendChild(li);
+    };
+
+    /**
+     * Clears the list of names and gets a fresh list from the server.
+     */
+    refreshList = function() {
+        return sendHttpRequest("session/" + window.sessionId + "/players", "GET", null, { isPersistent : true })
+        .then(function(result){
+            var i, players;
+            result = JSON.parse(result.responseText);
+            if (!result || !result.players) {
+                throw "No players";
+            }
+        
+            players = result.players;
+            for (i = 0; i < players.length; i++) {
+                if (players[i].is_dm) {
+                    addDM(players[i]);
+                } else {
+                    addPlayer(players[i]);
+                }
+            }
+        })
+        .catch(function(err) {
+            console.error(JSON.stringify(err));
+        });
+    };
+    if(window.sessionId) {
+        refreshList();
+    }
+    
+    window.socket.addEventListener("message", onReceiveMessage);
+})();
+
+</script>
+

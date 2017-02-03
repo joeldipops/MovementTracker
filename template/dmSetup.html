@@ -8,7 +8,10 @@
 </fieldset>
 <script type="application/javascript">
 onEvent(document.querySelector("button[name='submit']"), "click", function() {
-    sendHttpRequest("player", "PUT", {
+    if (!window.socketId) {
+        alert("YTF YOU HAVE NO SOCKET");
+    }
+    sendHttpRequest("session/" + window.sessionId + "/player", "PUT", {
         player_name : document.querySelector("input[name='playerName']").value,
         is_dm: true
     });    
@@ -16,7 +19,7 @@ onEvent(document.querySelector("button[name='submit']"), "click", function() {
 
 onEvent(document.querySelector("button[name='reset']"), "click", function() {
     if (window.sessionId) {
-        sendHttpRequest("reset/" + window.sessionId, "POST")
+        sendHttpRequest("session/" + window.sessionId, "DELETE")
         .then(function(res) {
             replaceBody("home", document.documentElement);
         })

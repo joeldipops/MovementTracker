@@ -1,26 +1,72 @@
 <h1>Welcome</h1>
-<label>Are you the DM?</label>
-<a href="./" name="yes">Yes</a>
-<a href="./" name="no">No</a>
+<label>Your Name</label><input type="text" name="playerName" />
+<fieldset id="dmOptions">
+    <legend>DM the game</legend>
+    <div class="hidden">DM Already Set</div>
+    <button name="start" data-is_dm="true">Start</button>
+</fieldset>
+<fieldset id="playerOptions">
+    <legend>OR Set up your character</legend>
+    <label>Character's Name</label><input type="text" name="characterName" />
+    <button name="start" data-is_dm="false">Start</button>
+</fieldset>
 <script type="application/javascript">
-    onEvent(document.querySelector("a[name='yes']"), "click", function(event) {
-        replaceBody("setup", null, { is_dm : 1}, { method : "POST" });
-        event.preventDefault();
-        return false;
-    });
+(function indexScript() {
+    var onClick, onMessage, buttons, i;
     
-    onEvent(document.querySelector("a[name='no']"), "click", function(event) {
-        replaceBody("setup", null, { is_dm : 0 }, { method : "POST" });
-        event.preventDefault();
-        return false;
-    });
-    
-    onEvent(window.socket, "message", function(event) {
+    /**
+     * Calls server to set up a session and a player.
+     */
+    onClick = function(event) {
+        var body, isDm;
+        body = { 
+            player_name : document.querySelector("input[name='playerName']").value,
+        };
+
+        isDm = event.currentTarget.getAttribute("data-is_dm") === "true";
+        if (isDm) {
+            body.is_dm = true;
+        } else {
+            body.character_name = document.querySelector("input[name='characterName']").value;
+        }
+
+        if (window.sessionId) {
+            sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
+        } else {
+            sendHttpRequest("session", "POST")
+            .then(function(result) {
+                var data = JSON.parse(result.responseText || null);
+                return sendHttpRequest("session/" + data.session_id + "/player", "PUT", body);        
+            })
+            .then(function() { })
+            .catch(function() {
+                debugger;
+                console.error();
+            });
+        }
+    };
+
+    buttons = document.querySelectorAll("button[name='start']");
+    for (i = 0; i < buttons.length; i++) {
+        onEvent(document.querySelector("button[name='start']"), "click", onClick);
+    }
+
+    /**
+     * Prevents more than one DM from signing up.
+     */
+    onMessage = function(event) {
         var data, el;
         data = JSON.parse(event.data);
-        if (data["dm_set"]) {
-            replaceBody("setup", null, {is_dm: 0}, { method : "POST" });
-        }
-    });
+        if (data["dm_add"]) {
+            el = document.querySelector("#dmOptions > button[name='start']");
+            el.classList.add("hidden");
 
+            el.parentNode.querySelector("div.hidden")
+            .classList.remove("hidden");
+            window.socket.removeEventListener("message", onMessage);
+        }
+
+    };
+    onEvent(window.socket, "message", onMessage);
+})();
 </script>

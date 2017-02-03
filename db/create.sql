@@ -33,9 +33,6 @@ ALTER DEFAULT PRIVILEGES
     
 CREATE TABLE WebSession (
     WebSessionId serial NOT NULL,
-    IsDmSet boolean NOT NULL
-        CONSTRAINT DF_WebSession_IsDmSet 
-        DEFAULT (false),
     CreatedTimeStamp timestamp WITHOUT TIME ZONE NOT NULL
         CONSTRAINT DF_WebSession_CreatedTimeStamp
         DEFAULT (now() AT TIME ZONE 'utc'),
@@ -56,6 +53,7 @@ CREATE TABLE Player (
     CONSTRAINT FK_Player_WebSession 
         FOREIGN KEY (WebSessionId) 
         REFERENCES WebSession (WebSessionId)
+        ON DELETE CASCADE
 );      
     
     

@@ -1,6 +1,6 @@
 var websocket,
 _onRequest, _onMessage, _onClose,
-_onNoConnections,
+_onNoConnections, _onConnectionLost,
 _count, _connections, _server, _cache,
 shared;
 
@@ -9,18 +9,27 @@ websocket = require("websocket");
 _count = 0;
 _connections = {};
 _cache = {};
+_reverseCache = {};
 
 /**
  * Cleans up a closed connection.
  * @param id of the connection.
  */
 _onClose = function(id, reasonCode, desc) {
+    var message = {};
     delete _connections[id];
     console.log("Connection " + id + " Lost");
     if (!Object.keys(_connections).length) {
         console.log("All connections closed...");
         _onNoConnections && _onNoConnections();
     }
+    if (!_cache[id]) {
+        return;
+    }
+    message[_cache[id].is_dm ? "dm_remove" : "player_remove"] = _cache[id];
+    shared.broadcastJSON(message);
+    _onConnectionLost(_cache[id]);
+    delete _cache[id];
 };
 
 /**
@@ -40,12 +49,14 @@ shared = {
     /**
      * Sets up a socket server to listen for connection requests.
      * @param webServer associated http server.
+     * @param {function} onConnectionLost Called when any connection is lost.
      * @param {function} onNoConnections Called when all connections are lost. 
      * @returns new socket server.
      */
-    setUpServer : function(webServer, onNoConnections) {
+    setUpServer : function(webServer, onConnectionLost, onNoConnections) {
         _server = new websocket.server({ httpServer: webServer});
         _server.on("request", _onRequest);
+        _onConnectionLost = onConnectionLost
         _onNoConnections = onNoConnections;
         return _server;
     },
@@ -64,7 +75,7 @@ shared = {
             if (excluding && excluding.indexOf(i) >= 0) {
                 continue;
             }            
-            
+            console.log(message);
             _connections[i].sendUTF(message);
         }
     },
