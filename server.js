@@ -20,7 +20,7 @@ server.use(restify.bodyParser());
 server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
-server.get("/page/play", function(req, res) {res.end();});
+server.get("/page/play", getPlayPage);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
@@ -67,7 +67,8 @@ function putPlayer(req, res) {
         sessionId,
         req.body.player_name,
         req.body.character_name,
-        !!req.body.is_dm    
+        req.body.player_type,
+        req.body.colour
     ];
 
     if(playerId) {
@@ -78,7 +79,7 @@ function putPlayer(req, res) {
     }
 
     db.runQuery(query, dbParams, function(result) {
-        var player, message;
+        var player, message, messageType;
         message = {};
         if (!result) {
             return serveError(res);
@@ -86,10 +87,16 @@ function putPlayer(req, res) {
         player = socketServerControl.cache(req.body.socket_id, { 
             player_id : result.rows[0].playerid,
             socket_id : req.body.socket_id,
-            is_dm :!!req.body.is_dm
+            player_type : req.body.player_type,
+            colour: req.body.colour
         });
         if (!playerId) {
-            message[req.body.is_dm ? "dm_add" : "player_add"] = {
+            switch(req.body.player_type) {
+                case "dm": messageType="dm_add"; break;
+                case "player": messageType="player_add"; break;
+                default: messageType="spectator_add";
+            }
+            message[messageType] = {
                 player_name: req.body.player_name,
                 character_name: req.body.character_name,
                 player_id: player.player_id,
@@ -140,7 +147,7 @@ function getPlayerList(req, res) {
     sessionId = parseInt(getEntityId("session", path), 10);
     params = getParams(req);
     
-    db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.is_dm || null)], function(result) {
+    db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.player_type || null)], function(result) {
         var i, body;
         if (!result) {
             return serveError(res);
@@ -152,7 +159,7 @@ function getPlayerList(req, res) {
                 player_id: result.rows[i].playerid,
                 player_name: result.rows[i].playername,
                 character_name: result.rows[i].charactername,
-                is_dm: result.rows[i].isdm
+                player_type: result.rows[i].playertype
             });
         }
         
@@ -209,6 +216,11 @@ function getStaticFile(req, res) {
         return res.end();        
     });
 }
+
+function getPlayPage(req, res) {
+    var content = fs.readFileSync("template/combat.html");
+    return serveHtml(res, content);
+};
 
 /**
  * Serves the index page.

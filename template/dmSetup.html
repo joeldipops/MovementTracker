@@ -8,9 +8,6 @@
 </fieldset>
 <script type="application/javascript">
 onEvent(document.querySelector("button[name='submit']"), "click", function() {
-    if (!window.socketId) {
-        alert("YTF YOU HAVE NO SOCKET");
-    }
     sendHttpRequest("session/" + window.sessionId + "/player", "PUT", {
         player_name : document.querySelector("input[name='playerName']").value,
         is_dm: true

@@ -126,6 +126,8 @@ var evaluateScripts = function(container) {
  * Gets a html document from the server and sets it as containers contents.
  * @param {string} pageName name of the requested page/document.
  * @param {HTMLElement} container element to replace contents.  defaults to <body>
+ * @param {object} data to send along with the call.
+ * @param {options} data to affect how the call is made eg. HTTP method.
  * @returns {Promise} when complete.. 
  */
 var replaceBody = function(url, container, data, options) {

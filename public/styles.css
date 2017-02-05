@@ -1,2 +1,107 @@
 .hidden { display: none; }
+:focus {outline:none;}
+::-moz-focus-inner {border:0;}
+
+td.ctrl-combatCell {
+    padding: 0;
+}
+
+    td.ctrl-combatCell > button {
+        height: 100%;
+        width: 100%;
+        border-width: 0;
+        background-color: inherit;
+    }
+
+    td.ctrl-combatCell > button:focus,
+    td.ctrl-combatCell > button:active {
+        background-color: rgba(0,0,0,0.2);
+    }
+    td.ctrl-combatCell > button:hover {
+        background-color: rgba(0,0,0,0.1);    
+    }        
+
+table.ctrl-combatMap {
+    table-layout: fixed;
+    border: solid 1px #000;
+    border-width: 0 1px 1px 0;
+    border-spacing: 0;    
+}
+    table.ctrl-combatMap th,
+    table.ctrl-combatMap td {
+        width:50px;
+        height: 50px;
+        vertical-align: middle;
+        text-align: center;
+        border-width: 1px 0 0 1px;                    
+        border-color: black;
+    }
+    
+    table.ctrl-combatMap th {
+        border-style: solid;
+
+    }
+    table.ctrl-combatMap th[scope='column'] {
+        border-bottom-width: 0;
+    }
+    table.ctrl-combatMap th[scope='row'] {
+        border-right-width: 0;
+    }
+
+    table.ctrl-combatMap td {
+        border-style: dotted;
+    }
+    
+    table.ctrl-combatMap td:first-of-type {
+        border-left-style: solid;
+    }
+    
+    table.ctrl-combatMap tr:nth-child(2) > td{
+        border-top-style: solid;
+    }
+
+
+.ctrl-colourOption > input {
+    display: none;
+}
+    .ctrl-colourOption > label {
+        display: inline-block;
+    }
+
+    .ctrl-colourOption > label:first-child {
+        vertical-align: top;
+        line-height: 50px;
+    }
+
+    .ctrl-colourOption > input + label {
+        width: 50px;
+        height: 50px;
+        border: 1px solid black;
+    }
+
+        .ctrl-colourOption > input:checked + label {
+            border: 3px  solid gray;
+        }
+
+        .ctrl-colourOption > input[value='FF0000'] + label { 
+            background-color: #FF0000;
+        }
+        .ctrl-colourOption > input[value='00FF00'] + label { 
+            background-color: #00FF00;
+        }
+        .ctrl-colourOption > input[value='0000FF'] + label { 
+            background-color: #0000FF;
+        }
+        .ctrl-colourOption > input[value='000000'] + label {  
+            background-color: #000000;
+        }
+        .ctrl-colourOption > input[value='00FFFF'] + label {  
+            background-color: #00FFFF;
+        }
+        .ctrl-colourOption > input[value='FF00FF'] + label { 
+            background-color: #FF00FF;
+        }
+        .ctrl-colourOption > input[value='FFFF00'] + label {  
+            background-color: #FFFF00;
+        }
 

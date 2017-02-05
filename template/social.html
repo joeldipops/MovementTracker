@@ -88,10 +88,10 @@
         
             players = result.players;
             for (i = 0; i < players.length; i++) {
-                if (players[i].is_dm) {
-                    addDM(players[i]);
-                } else {
-                    addPlayer(players[i]);
+                switch (players[i].player_type) {
+                    case "dm": addDM(players[i]); break;
+                    case "player": addPlayer(players[i]); break;
+                    default: break;
                 }
             }
         })

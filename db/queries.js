@@ -14,9 +14,14 @@ WHERE WebSessionId = $1
     getCurrentSession: `
 SELECT
     S.WebSessionId,
-    bool_or(P.IsDm) AS IsDmSet
+    bool_or(P.WebSessionId IS NULL) AS IsDmSet
 FROM WebSession S
-    LEFT OUTER JOIN Player P
+    LEFT OUTER JOIN (
+        SELECT 
+            WebSessionId 
+        FROM Player
+        WHERE PlayerType = 'dm'
+    ) P
     ON P.WebSessionId = S.WebSessionId
 GROUP BY S.WebSessionId, S.CreatedTimeStamp
 ORDER BY S.CreatedTimeStamp DESC
@@ -24,8 +29,8 @@ LIMIT 1
     ;`,
 
     createPlayer: `
-INSERT INTO Player (WebSessionId, PlayerName, CharacterName, IsDm)
-VALUES ($1, $2, $3, $4)
+INSERT INTO Player (WebSessionId, PlayerName, CharacterName, PlayerType, Colour)
+VALUES ($1, $2, $3, $4, $5)
 RETURNING PlayerId
     ;`,
 
@@ -35,7 +40,8 @@ SET
     WebSessionId = coalesce($2, P.WebSessionId),
     PlayerName = coalesce($3, P.PlayerName),
     CharacterName = coalesce($4, P.CharacterName),
-    IsDm = coalesce($5, P.IsDm)
+    PlayerType = coalesce($5, P.PlayerType),
+    Colour = coalesce($6, P.Colour)
 FROM Player P
 WHERE Pl.PlayerId = $1
 RETURNING Pl.PlayerId
@@ -51,9 +57,9 @@ SELECT
     PlayerId,
     PlayerName,
     CharacterName,
-    IsDm
+    PlayerType
 FROM Player
 WHERE WebSessionId = $1
-    AND ($2 IS NULL OR IsDm = $2)
+    AND ($2 IS NULL OR PlayerType = $2)
     ;`
 };

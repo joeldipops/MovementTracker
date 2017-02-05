@@ -3,12 +3,38 @@
 <fieldset id="dmOptions">
     <legend>DM the game</legend>
     <div class="hidden">DM Already Set</div>
-    <button name="start" data-is_dm>Start</button>
+    <button name="start" data-player_type="dm">Start</button>
 </fieldset>
 <fieldset id="playerOptions">
     <legend>OR Set up your character</legend>
     <label>Character's Name</label><input type="text" name="characterName" />
-    <button name="start">Start</button>
+    <div class="ctrl-colourOption">
+        <label>Colour</label>
+        <input type="radio" id="red" value="FF0000" name="colour" />
+        <label for="red">&nbsp;</label>
+
+        <input type="radio" id="green" value="00FF00" name="colour" />
+        <label for="green">&nbsp;</label>
+
+        <input type="radio" id="blue" value="0000FF" name="colour" />
+        <label for="blue">&nbsp;</label>
+
+        <input type="radio" id="black" value="000000" name="colour" />
+        <label for="black">&nbsp;</label>
+
+        <input type="radio" id="cyan" value="00FFFF" name="colour" />
+        <label for="cyan">&nbsp;</label>
+
+        <input type="radio" id="magenta" value="FF00FF" name="colour" />
+        <label for="magenta">&nbsp;</label>
+
+        <input type="radio" id="yellow" value="FFFF00" name="colour" />
+        <label for="yellow">&nbsp;</label>                                        
+    </div>
+    <button name="start" data-player_type="player">Start</button>
+</fieldset>
+<fieldset>
+   <button name="start" data-player_type="spectator">Spectate</button>
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
@@ -36,32 +62,34 @@
      * Calls server to set up a session and a player.
      */
     onClick = function(event) {
-        var body, isDm;
+        var body, result;
         body = { 
             player_name : document.querySelector("input[name='playerName']").value,
+            player_type : event.currentTarget.getAttribute("data-player_type")
         };
 
-        isDm = event.currentTarget.hasAttribute("data-is_dm");
-        if (isDm) {
-            body.is_dm = true;
-        } else {
+        if (body.player_type === "player") {
             body.character_name = document.querySelector("input[name='characterName']").value;
+            body.colour = document.querySelector("input[name='colour']:checked").value;
         }
 
         if (window.sessionId) {
-            sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
+            result = sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
         } else {
-            sendHttpRequest("session", "POST")
+            result = sendHttpRequest("session", "POST")
             .then(function(result) {
                 var data = JSON.parse(result.responseText || null);
                 return sendHttpRequest("session/" + data.session_id + "/player", "PUT", body);        
             })
-            .then(function() { })
-            .catch(function() {
-                debugger;
-                console.error();
-            });
         }
+
+        result.then(function() {
+            return replaceBody("play");    
+        })
+        .catch(function() {
+            debugger;
+            console.error();
+        });        
     };
 
     buttons = document.querySelectorAll("button[name='start']");

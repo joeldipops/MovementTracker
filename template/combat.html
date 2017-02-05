@@ -1,0 +1,76 @@
+<aside id="combatants">
+    <h3>Initiative Order</h3>
+    <ol>
+
+    </ol>
+</aside>
+<article id="turn">
+    <h3></h3>
+    <table id="map" class="ctrl-combatMap">
+    </table>
+</article>
+<script id="template-combatCell" type="text/html">
+<td class="ctrl-combatCell">
+    <button>&nbsp;</button>
+</td>
+</script>
+<script type="application/javascript">
+(function combatScript() {
+    var onMessageReceived, renderMap, template,
+        TABLE_WIDTH = 10,
+        TABLE_HEIGHT = 10
+    ;
+    
+    template = document.querySelector("#template-combatCell").innerHTML;
+
+    function renderMap(data) {
+        var x, y,
+        el, newTr, newTd, button;
+    
+        el = document.getElementById("map");
+        while(el.nextChild) {
+            el.removeChild(el.nextChild);
+        }
+
+        for(y = 0; y < data.height + 1; y++) {
+            newTr = document.createElement("tr");
+            el.appendChild(newTr);
+            for (x = 0; x < data.width + 1; x++) {
+                if (y === 0 || x === 0) {
+                    newTd = document.createElement("th");
+                    if (x !== 0) {
+                        newTd.setAttribute("scope", "column");
+                        newTd.innerHTML = x;
+                    }
+                    if (y !== 0) {
+                        newTd.setAttribute("scope", "row");
+                        newTd.innerHTML = y;
+                    }
+                    newTr.appendChild(newTd);                    
+                } else {
+                    newTr.insertAdjacentHTML("beforeend", template);
+                    button = newTr.lastElementChild.querySelector("button");
+                    button.setAttribute("data-x", x);
+                    button.setAttribute("data-y", y);
+                }
+            }
+        }
+    };
+    
+    /**
+     * Handles messages received through the web socket.
+     */
+    onReceiveMessage = function(event) {
+        var data, el;
+        data = JSON.parse(event.data);
+        if (data["map_changed"]) {
+            renderMap(data["map_changed"]);    
+        }
+    }; 
+    
+    renderMap({
+        height: TABLE_HEIGHT,
+        width: TABLE_WIDTH
+    });
+})();
+</script>
