@@ -21,6 +21,7 @@ server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
 server.get("/page/play", getPlayPage);
+server.get("/page/dm_console", getDmConsolePage);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
@@ -131,9 +132,15 @@ function deleteSession(req, res) {
     var path, sessionId;
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
+    console.log(req.url);
+    console.log(path);    
+    console.log(queries.deleteSession);    
+    console.log(sessionId);
     db.runQuery(queries.deleteSession, [sessionId], function(result) {
+        console.log("Made it through the wilderness");    
+        console.log(JSON.stringify(result));
         if (!result) {
-            serveError(res);
+            return serveError(res);
         } else {
             res.writeHead(200);
             res.end();
@@ -222,6 +229,11 @@ function getPlayPage(req, res) {
     return serveHtml(res, content);
 };
 
+function getDmConsolePage(req, res) {
+    var content = fs.readFileSync("template/dmSetup.html");
+    return serveHtml(res, content);
+};
+
 /**
  * Serves the index page.
  */
@@ -237,10 +249,10 @@ function getIndex(req, res) {
 <script type="application/javascript">window.sessionId = ${result.rows[0].websessionid};</script>
             `;
 
-            content = fs.readFileSync("template/index.html");
-            content += sessionScript;
+            content = sessionScript + fs.readFileSync("template/index.html");
         }
         html = mustache.render(body.toString(), {
+            bootstrap: sessionScript || "",
             content: content,
             social: socialContent
         });   
@@ -307,7 +319,8 @@ function serveError(res, message, code) {
 
 function getEntityId(entityName, path) {
     var regex, result;
-    regex = new RegExp("^.*\/" + entityName + "\/([0-9]+)\/.*$");
+    regex = new RegExp("^.*\/" + entityName + "\/([0-9]+)\/?.*$")
+
     result = regex.exec(path);
     if (!result) {
         return;

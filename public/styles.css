@@ -2,6 +2,37 @@
 :focus {outline:none;}
 ::-moz-focus-inner {border:0;}
 
+#social {
+    float: right;
+}
+
+ol.initiativeList {
+}
+
+    body[data-state='lobby'] ol.initiativeList > li {}
+        body[data-state='lobby'] ol.initiativeList > li > .initiativeScore { display: none; }
+        body[data-state='lobby'] ol.initiativeList > li > .usedReaction { display: none; } 
+        body[data-state='lobby'] ol.initiativeList > li > [name='react'] { display: none; } 
+        body[data-state='lobby'] ol.initiativeList > li > [name='position'] { display: none; }
+        body[data-state='lobby'] ol.initiativeList > li > [name='toggleMob'] { display: none; }
+        
+    body[data-state='setup'] ol.initiativeList > li {}
+        body[data-state='setup'] ol.initiativeList > li > .initiativeScore { display: none; }
+        body[data-state='setup'] ol.initiativeList > li > .usedReaction { display: none; } 
+        body[data-state='setup'] ol.initiativeList > li > [name='react'] { display: none; } 
+        body[data-state='setup'] ol.initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state='setup'] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
+        
+    body[data-state="combat"] ol.initiativeList > li {}
+        body[data-state="combat"] ol.initiativeList > li > .initiativeScore { display: inline; }
+        body[data-state="combat"] ol.initiativeList > li > .usedReaction { display: inline-block; } 
+        body[data-state="combat"] ol.initiativeList > li[data-is_my_pc] > [name='react'] { 
+            display: inline-block; 
+        } 
+        body[data-state="combat"] ol.initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state="combat"] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
+        
+    
 td.ctrl-combatCell {
     padding: 0;
 }

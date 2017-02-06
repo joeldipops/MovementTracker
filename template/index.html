@@ -3,14 +3,14 @@
 <fieldset id="dmOptions">
     <legend>DM the game</legend>
     <div class="hidden">DM Already Set</div>
-    <button name="start" data-player_type="dm">Start</button>
+    <button name="start" data-player_type="dm" disabled>Start</button>
 </fieldset>
 <fieldset id="playerOptions">
     <legend>OR Set up your character</legend>
     <label>Character's Name</label><input type="text" name="characterName" />
     <div class="ctrl-colourOption">
         <label>Colour</label>
-        <input type="radio" id="red" value="FF0000" name="colour" />
+        <input type="radio" id="red" value="FF0000" name="colour" checked />
         <label for="red">&nbsp;</label>
 
         <input type="radio" id="green" value="00FF00" name="colour" />
@@ -30,16 +30,19 @@
 
         <input type="radio" id="yellow" value="FFFF00" name="colour" />
         <label for="yellow">&nbsp;</label>                                        
+        <input type="text" name="colour" />
     </div>
-    <button name="start" data-player_type="player">Start</button>
+    <button name="start" data-player_type="player" disabled>Start</button>
 </fieldset>
 <fieldset>
    <button name="start" data-player_type="spectator">Spectate</button>
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
-    var onClick, onMessage,
-        hideDmButton, buttons, i;
+    var onClickStart, onMessageReceived, onChangeInput,
+        hideDmButton, buttons, inputs, i;
+        
+    document.body.setAttribute("data-state", "lobby");        
         
     hideDmButton = function() {
         el = document.querySelector("#dmOptions > button[name='start']");
@@ -47,7 +50,7 @@
 
         el.parentNode.querySelector("div.hidden")
         .classList.remove("hidden");
-        window.socket.removeEventListener("message", onMessage);
+        window.socket.removeEventListener("message", onMessageReceived);
     };
 
     sendHttpRequest("session", "GET")
@@ -59,18 +62,39 @@
     });
     
     /**
+     * Enables start buttons as criteria are met
+     */
+    onChangeInput = function(event) {
+        var dmButton, playerButton;
+        dmButton = document.querySelector("button[name='start'][data-player_type='dm']");
+        playerButton = document.querySelector("button[name='start'][data-player_type='player']");
+        if (document.querySelector("input[name='playerName']").value) {
+             dmButton.removeAttribute("disabled");
+             dmButton.disabled = false;
+             
+             playerButton.removeAttribute("disabled");
+             playerButton.disabled = !(document.querySelector("input[name='characterName']").value);
+        } else {
+            dmButton.disabled = true;
+            playerButton.disabled = true;
+        
+        }
+    };
+    
+    /**
      * Calls server to set up a session and a player.
      */
-    onClick = function(event) {
+    onClickStart = function(event) {
         var body, result;
         body = { 
-            player_name : document.querySelector("input[name='playerName']").value,
+            player_name : document.querySelector("input[name='playerName']").value || "Captain Mystery",
             player_type : event.currentTarget.getAttribute("data-player_type")
         };
 
         if (body.player_type === "player") {
             body.character_name = document.querySelector("input[name='characterName']").value;
-            body.colour = document.querySelector("input[name='colour']:checked").value;
+            body.colour = document.querySelector("input[type='text'][name='colour']").value ||
+                document.querySelector("input[name='colour']:checked").value;            
         }
 
         if (window.sessionId) {
@@ -84,7 +108,11 @@
         }
 
         result.then(function() {
-            return replaceBody("play");    
+            if (body.player_type === "dm") {
+                return replaceBody("dm_console");
+            } else {
+                return replaceBody("play");
+            }
         })
         .catch(function() {
             debugger;
@@ -92,21 +120,26 @@
         });        
     };
 
-    buttons = document.querySelectorAll("button[name='start']");
-    for (i = 0; i < buttons.length; i++) {
-        onEvent(buttons[i], "click", onClick);
-    }
-
     /**
      * Prevents more than one DM from signing up.
      */
-    onMessage = function(event) {
+    onMessageReceived = function(event) {
         var data, el;
         data = JSON.parse(event.data);
         if (data["dm_add"]) {
             hideDmButton();
         }
     };
-    onEvent(window.socket, "message", onMessage);
+    
+    inputs = document.querySelectorAll("input");
+    for (i = 0; i < inputs.length; i++) {
+        onEvent(inputs[i], "change", onChangeInput);
+    }
+
+    buttons = document.querySelectorAll("button[name='start']");
+    for (i = 0; i < buttons.length; i++) {
+        onEvent(buttons[i], "click", onClickStart);
+    }    
+    onEvent(window.socket, "message", onMessageReceived);
 })();
 </script>

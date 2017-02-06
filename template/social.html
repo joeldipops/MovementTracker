@@ -1,10 +1,24 @@
 <h2>Ready Players</h2>
 <div>Waiting for DM</div>
-<ul></ul>
+<ol class="initiativeList">
+</ol>
+<script id="template-initiativeListItem"type="text/html">
+<li data-id="" data-mob_type="">
+    <span class="initiativeScore"></span>
+    <span class="mobName"></span>
+    <span class="usedReaction">No</span>
+    <button name="position">loc</span>
+    <button name="react">react</button>
+    <button name="toggleMob">0HP</button>
+</li>
+</script>
 <script type="application/javascript">
 (function socialScript() {
     var onReceiveMessage, onClose, 
-    addPlayer, removePlayer, addDM, removeDM;
+        addPlayer, removePlayer, addDM, removeDM,
+        template;
+
+    template = document.querySelector("#template-initiativeListItem").innerHTML;        
     
     /**
      * Cleans up bound events.
@@ -62,16 +76,17 @@
     };
     
     addPlayer = function(data) {
-        var li;
+        var list, li;
         // Don't add same player more than once.
         if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
             return;
         }
-        li = document.createElement("li");
-        li.innerHTML = data.character_name;
+        list = document.querySelector("#social > ol.initiativeList");
+        list.insertAdjacentHTML("beforeend", template);
+        li = list.lastElementChild;
+        
         li.setAttribute("data-id", data.player_id);
-        document.querySelector("#social > ul")
-        .appendChild(li);
+        li.querySelector(".mobName").innerHTML = data.character_name;
     };
 
     /**

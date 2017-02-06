@@ -7,6 +7,7 @@
     <button name="submit">Next</button>
 </fieldset>
 <script type="application/javascript">
+document.body.setAttribute("data-state", "setup");
 onEvent(document.querySelector("button[name='submit']"), "click", function() {
     sendHttpRequest("session/" + window.sessionId + "/player", "PUT", {
         player_name : document.querySelector("input[name='playerName']").value,

@@ -14,7 +14,7 @@ WHERE WebSessionId = $1
     getCurrentSession: `
 SELECT
     S.WebSessionId,
-    bool_or(P.WebSessionId IS NULL) AS IsDmSet
+    bool_or(P.WebSessionId IS NOT NULL) AS IsDmSet
 FROM WebSession S
     LEFT OUTER JOIN (
         SELECT 
