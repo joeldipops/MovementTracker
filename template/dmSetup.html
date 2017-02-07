@@ -1,31 +1,70 @@
-<nav>
-    <button name="reset">Back to Start</button>
-</nav>
-<h2>You are god. Hooray.</h2>
+<table id="map" class="ctrl-combatMap">
+</table>
 <fieldset>
-    <label>Your Name</label><input type="text" name="playerName" />
-    <button name="submit">Next</button>
+    <legend>Set Map</legend>
+    <label for="width">Width:</label><input id="width" type="number" name="width" />
+    <label for="height">Height:<label><input id="height" type="number" name="height" />
+    <button name="generateMap">Generate</button>
 </fieldset>
+<script id="template-controls" type="text/html">
+<button name="clear">Start new combat</button>
+<button name="reset">Reset Entire Session</button>
+</script>
+<script id="template-combatCell" type="text/html">
+<td class="ctrl-combatCell">
+    <button>&nbsp;</button>
+</td>
+</script>
 <script type="application/javascript">
-document.body.setAttribute("data-state", "setup");
-onEvent(document.querySelector("button[name='submit']"), "click", function() {
-    sendHttpRequest("session/" + window.sessionId + "/player", "PUT", {
-        player_name : document.querySelector("input[name='playerName']").value,
-        is_dm: true
-    });    
-});
+loadExternalScript("public/combatMap.js");
+</script>
+<script type="application/javascript">
+(function setupScript() {
+    var clear, 
+        menu, controlsTemplate, mapCellTemplate;
 
-onEvent(document.querySelector("button[name='reset']"), "click", function() {
-    if (window.sessionId) {
-        sendHttpRequest("session/" + window.sessionId, "DELETE")
-        .then(function(res) {
-            replaceBody("home", document.documentElement);
-        })
-    .   catch(function(res) {
-            console.error(res.status, res.responseText);
-        });
-    } else {
-        replaceBody("home", document.documentElement);    
-    }
-});
+    clear = function() {
+        var map;
+        document.getElementById("width").value = "";
+        document.getElementById("height").value = "";
+        map = document.getElementById("map");
+        while(map.firstChild) {
+            map.removeChild(map.firstChild);
+        }
+    };
+
+    document.body.setAttribute("data-state", "setup");
+    controlsTemplate = document.getElementById("template-controls").innerHTML;
+    mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
+    
+    menu = document.getElementById("controls");
+    menu.insertAdjacentHTML("beforeend", controlsTemplate);
+    
+    onEvent(document.querySelector("button[name='generateMap']"), "click", function() {
+        var width, height;
+        width = parseInt(document.querySelector("input[name='width']").value, 10);
+        height = parseInt(document.querySelector("input[name='height']").value, 10);
+        clear();
+        renderMap({
+            width: width,
+            height: height
+        }, mapCellTemplate);
+    });
+    
+    onEvent(document.querySelector("button[name='clear']"), "click", clear)
+
+    onEvent(document.querySelector("button[name='reset']"), "click", function() {
+        if (window.sessionId) {
+            sendHttpRequest("session/" + window.sessionId, "DELETE")
+            .then(function(res) {
+                replaceBody("home", document.documentElement);
+            })
+        .   catch(function(res) {
+                console.error(res.status, res.responseText);
+            });
+        } else {
+            replaceBody("home", document.documentElement);    
+        }
+    });
+})();
 </script>

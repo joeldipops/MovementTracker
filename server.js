@@ -101,7 +101,8 @@ function putPlayer(req, res) {
                 player_name: req.body.player_name,
                 character_name: req.body.character_name,
                 player_id: player.player_id,
-                session_id: sessionId
+                session_id: sessionId,
+                colour: player.colour
             };
             socketServerControl.broadcastJSON(message);
         }
@@ -132,13 +133,7 @@ function deleteSession(req, res) {
     var path, sessionId;
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
-    console.log(req.url);
-    console.log(path);    
-    console.log(queries.deleteSession);    
-    console.log(sessionId);
     db.runQuery(queries.deleteSession, [sessionId], function(result) {
-        console.log("Made it through the wilderness");    
-        console.log(JSON.stringify(result));
         if (!result) {
             return serveError(res);
         } else {
@@ -166,7 +161,8 @@ function getPlayerList(req, res) {
                 player_id: result.rows[i].playerid,
                 player_name: result.rows[i].playername,
                 character_name: result.rows[i].charactername,
-                player_type: result.rows[i].playertype
+                player_type: result.rows[i].playertype,
+                colour: result.rows[i].colour
             });
         }
         

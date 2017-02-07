@@ -57,7 +57,8 @@ SELECT
     PlayerId,
     PlayerName,
     CharacterName,
-    PlayerType
+    PlayerType,
+    Colour
 FROM Player
 WHERE WebSessionId = $1
     AND ($2 IS NULL OR PlayerType = $2)

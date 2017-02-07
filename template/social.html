@@ -84,6 +84,7 @@
         list = document.querySelector("#social > ol.initiativeList");
         list.insertAdjacentHTML("beforeend", template);
         li = list.lastElementChild;
+        li.style.color = "#" + data.colour;
         
         li.setAttribute("data-id", data.player_id);
         li.querySelector(".mobName").innerHTML = data.character_name;

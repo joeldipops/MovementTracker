@@ -1,12 +1,13 @@
 var DEFAULT,
-onEvent, closePage, newPromise;
+onEvent, closePage, newPromise, wait;
 
 DEFAULT = false;
 
 var a = function() {
-    var _pageEvents, _pendingPromises;
+    var _pageEvents, _pendingPromises, _pendingTimeouts;
     _pageEvents = [];
     _pendingCancelFlags = [];
+    _pendingTimeouts = [];
 
     /**
      * Keeps track of page-level events so they can be unbound later. 
@@ -32,7 +33,21 @@ var a = function() {
            _pendingCancelFlags[i].value = true;
        }
        _pendingCancelFlags.length = 0;
-    }
+       for (i = 0; i < _pendingTimeouts.length; i++) {
+           clearTimeout(_pendingTimeouts[i]);
+       }
+    };
+    
+    /**
+     * Repeatedly calls a function until it succeeds.
+     * Used when waiting for a resource to exist.
+     * @param {function} callback, function must return truthy on success and falsy otherwise.
+     */
+    wait = function(callback) {
+        if (!callback()) {
+            _pendingTimeouts.push(setTimeout(wait.bind({}, callback), 50));
+        }
+    };
     
     /**
      * Keeps track of pending promises so they can be rejected when no longer needed.
@@ -164,6 +179,15 @@ function toQueryString(obj) {
     }
     return "?" + parts.join("&");
 }
+
+function loadExternalScript(src) {
+    var script, main;
+    script = document.createElement("script");
+    script.setAttribute("type", "application/javascript");
+    script.setAttribute("src", src);
+    main = document.getElementById("main");
+    main.insertBefore(script, main.firstChild);
+};
 
 // Sets up a websocket connection with the server.
 var socketControl = function(socketAddress) {
