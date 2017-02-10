@@ -1,12 +1,20 @@
-<table id="map" class="ctrl-combatMap">
-</table>
+<table id="map" class="ctrl-combatMap" data-state=""></table>
 <fieldset>
     <legend>Set Map</legend>
-    <label for="width">Width:</label><input id="width" type="number" name="width" />
-    <label for="height">Height:<label><input id="height" type="number" name="height" />
+    <label for="mapWidth">Width:</label><input id="mapWidth" type="number" name="mapWidth" value="12" />
+    <label for="mapHeight">Height:<label><input id="mapHeight" type="number" name="mapHeight" value="12" />
     <button name="generateMap">Generate</button>
 </fieldset>
 <script id="template-controls" type="text/html">
+<fieldset id="terrainOptions">
+    <legend>Add terrain</legend>
+    <select name="terrainType"></select>
+    <label for="terrainWidth">Width</label>
+    <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+    <label for="terrainLength">Length</label>
+    <input type="number" id="terrainLength" name="terrainLength" value="1" />
+    <button name="addTerrain">Add</button>    
+</fieldset>
 <button name="clear">Start new combat</button>
 <button name="reset">Reset Entire Session</button>
 </script>
@@ -20,51 +28,109 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function setupScript() {
-    var clear, 
-        menu, controlsTemplate, mapCellTemplate;
+    var clear, renderMenu, addTerrain, i,
+        controlsTemplate, mapCellTemplate;
 
+    /**
+     * Resets the map to a blank slate.
+     */
     clear = function() {
         var map;
-        document.getElementById("width").value = "";
-        document.getElementById("height").value = "";
+        document.getElementById("mapWidth").value = "";
+        document.getElementById("mapHeight").value = "";
+        pageContext.removeMapEvents();
         map = document.getElementById("map");
+        map.removeAttribute("data-width");
+        map.removeAttribute("data-height");
         while(map.firstChild) {
             map.removeChild(map.firstChild);
         }
     };
+    
+    /**
+     * Adds a terrain to the map.
+     */
+    addTerrain = function(event) {
+        var x, y, X, Y, width, height, type,
+            el, maxX, maxY;
+            
+        x = parseInt(event.currentTarget.getAttribute("data-x"));    
+        y = parseInt(event.currentTarget.getAttribute("data-y"));
+        width = parseInt(document.querySelector("[name='terrainWidth']").value);
+        height = parseInt(document.querySelector("[name='terrainLength']").value);
+        type = document.querySelector("[name='terrainType']").value;
+        
+        // Temporary until I figure out what to do vis-a-vis code reuse.
+        maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
+        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));
 
-    document.body.setAttribute("data-state", "setup");
-    controlsTemplate = document.getElementById("template-controls").innerHTML;
-    mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
+        for (X = x; X < (x + width) && X <= maxX; X++) {
+            for(Y = y; Y < (y + height) && Y <= maxY; Y++) {
+                el = pageContext.getCell(X, Y);    
+                el.setAttribute("data-type", type);
+                el.style.backgroundColor = pageContext.terrainTypes[type].colour;
+            }
+        }
+    };
     
-    menu = document.getElementById("controls");
-    menu.insertAdjacentHTML("beforeend", controlsTemplate);
-    
-    onEvent(document.querySelector("button[name='generateMap']"), "click", function() {
+    onEvent("button[name='generateMap']", "click", function() {
         var width, height;
-        width = parseInt(document.querySelector("input[name='width']").value, 10);
-        height = parseInt(document.querySelector("input[name='height']").value, 10);
+        width = parseInt(document.querySelector("input[name='mapWidth']").value, 10);
+        height = parseInt(document.querySelector("input[name='mapHeight']").value, 10);
         clear();
-        renderMap({
+        pageContext.renderMap({
             width: width,
             height: height
         }, mapCellTemplate);
     });
     
-    onEvent(document.querySelector("button[name='clear']"), "click", clear)
-
-    onEvent(document.querySelector("button[name='reset']"), "click", function() {
-        if (window.sessionId) {
-            sendHttpRequest("session/" + window.sessionId, "DELETE")
-            .then(function(res) {
-                replaceBody("home", document.documentElement);
-            })
-        .   catch(function(res) {
-                console.error(res.status, res.responseText);
-            });
-        } else {
-            replaceBody("home", document.documentElement);    
+    document.body.setAttribute("data-state", "setup");
+    controlsTemplate = document.getElementById("template-controls").innerHTML;
+    mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
+    
+    renderMenu = function() {
+        var menu, el, i, option;
+        menu = document.getElementById("controls");
+        menu.insertAdjacentHTML("beforeend", controlsTemplate);   
+        el = menu.querySelector("#terrainOptions > select[name='terrainType']");
+        for (i in pageContext.terrainTypes) {
+            option = document.createElement("option");
+            option.innerHTML = pageContext.terrainTypes[i].text;
+            option.value = i;
+            if (i === "difficult") {
+                option.selected = true;
+            }
+            el.appendChild(option);            
         }
-    });
+        onEvent("button[name='addTerrain']", "click", function() {
+            pageContext.removeMapEvents();            
+            pageContext.onMapEvent("td > button", "click",  addTerrain);
+        });
+        onEvent("button[name='clear']", "click", clear)
+
+        onEvent("button[name='reset']", "click", function() {
+            if (window.sessionId) {
+                sendHttpRequest("session/" + window.sessionId, "DELETE")
+                .then(function(res) {
+                    replaceBody("home", document.documentElement);
+                })
+            .   catch(function(res) {
+                    console.error(res.status, res.responseText);
+                });
+            } else {
+                replaceBody("home", document.documentElement);    
+            }
+            delete window.sessionId;
+        });        
+    };
+    
+    wait(function() {
+        if (pageContext.terrainTypes) {
+            renderMenu();
+            return true;
+        } else {
+            return false;
+        }
+    });    
 })();
 </script>

@@ -27,13 +27,13 @@ loadExternalScript("public/combatMap.js");
         var data, el;
         data = JSON.parse(event.data);
         if (data["map_changed"]) {
-            window.renderMap(data["map_changed"], template);    
+            pageContext.renderMap(data["map_changed"], template);    
         }
     }; 
     
     wait(function() {
-        if (window.renderMap) {
-            window.renderMap({
+        if (pageContext.renderMap) {
+            pageContext.renderMap({
                 height: TABLE_HEIGHT,
                 width: TABLE_WIDTH
             }, template);

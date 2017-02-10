@@ -1,7 +1,8 @@
 var DEFAULT,
-onEvent, closePage, newPromise, wait;
+onEvent, closePage, newPromise, wait, pageContext;
 
 DEFAULT = false;
+pageContext = {};
 
 var a = function() {
     var _pageEvents, _pendingPromises, _pendingTimeouts;
@@ -11,11 +12,14 @@ var a = function() {
 
     /**
      * Keeps track of page-level events so they can be unbound later. 
-     * @param {EventTarget} target to bind event.
+     * @param {EventTarget|string} target to bind event or selector.
      * @param {string} event name of event.
      * @param {function} callback when event is fired.
      */
     onEvent = function(target, event, handler) {
+        if (typeof target === "string") {
+            target = document.querySelector(target);
+        }
         target.addEventListener(event, handler);
         _pageEvents.push(target.removeEventListener.bind(target, event, handler));
     };
@@ -36,6 +40,7 @@ var a = function() {
        for (i = 0; i < _pendingTimeouts.length; i++) {
            clearTimeout(_pendingTimeouts[i]);
        }
+       pageContext = {};
     };
     
     /**
@@ -47,6 +52,16 @@ var a = function() {
         if (!callback()) {
             _pendingTimeouts.push(setTimeout(wait.bind({}, callback), 50));
         }
+    };
+    
+    /**
+     * Calls parse int with the default r value of 10
+     * @param {string} value can be parsed into a number.
+     * @param {number} r (optional) Just know it should be 10...
+     * @returns {number} parsed value or NaN.
+     */
+    var parseInt = function(value, r) {
+        return window.parseInt(value, r !== void 0 ? r : 10);
     };
     
     /**
@@ -157,6 +172,9 @@ var replaceBody = function(url, container, data, options) {
    })
    .catch(function(result) {
        if (result) {
+           if (!result.responseText) {
+               console.error(JSON.stringify(result));
+           }
            console.error(result.responseText);
        } else {
            console.trace();
