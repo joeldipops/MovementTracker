@@ -1,9 +1,9 @@
 (function combatMapScript() {
-    var _mapEvents, _mapEl;
+    var _mapEvents, _mapEl, _mobs;
     
-
     _mapEvents = [];
     _mapEl = document.getElementById("map");    
+    _mobs = {};
 
     /**
      * Renders a grid according to data, setting each td as the html in template.
@@ -91,9 +91,48 @@
 
     pageContext.terrainTypes = {
         normal: { text : "Normal", colour : "rgba(0,0,0,0)" },
-        difficult : {text : "Difficult", colour : "#DDDDDD" },
+        difficult : {text : "Difficult", colour : "#CCCCCC" },
         climbable: { text: "Climbable", colour: "#DDAAAA" },
         swimable: { text: "Swimable", colour: "#0000FF" },
         impassable: { text: "Impassable", colour: "#000000" }
+    };
+    
+    // Not authoritative sizes.
+    pageContext.mobSizes = {
+        tiny : { text: "Tiny", tiles: 1, rank : 1 },
+        small : { text: "Small", tiles: 1, rank : 2 },
+        medium: { text: "Medium", tiles: 1, rank: 3 },
+        large : { text : "Large", tiles: 2, rank: 4 },
+        huge : { text : "Huge", tiles: 3, rank: 5},
+        colossal: { text: "Colossal", tiles: 4, rank: 6 }
+    };
+    
+    /**
+     * Gets mobs partially or fully in a given cell.
+     * @param {number} x co-ordinate of the cell.
+     * @param {number} y co-ordinate of the cell.
+     */
+    pageContext.getMob = function(x, y) {
+        if (_mobs[x]) {
+            return _mobs[x][y];
+        }
+        return null;
+    };
+    
+    /**
+     * Sets a mob as part of a given cell.
+     * @param {number} x co-ordinate of the cell.
+     * @param {number} y co-ordinate of the cell.
+     * @param {object} mob data describing the mob.
+     */
+    pageContext.setMob = function(x, y, mob) {
+         if (!_mobs[x]) {
+             _mobs[x] = {};
+         }
+         if (!_mobs[x][y]) {
+             _mobs[x][y] = [];
+         }
+         
+         _mobs[x][y].push(mob);
     };
 })();

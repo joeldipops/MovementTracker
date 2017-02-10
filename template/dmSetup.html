@@ -3,18 +3,39 @@
     <legend>Set Map</legend>
     <label for="mapWidth">Width:</label><input id="mapWidth" type="number" name="mapWidth" value="12" />
     <label for="mapHeight">Height:<label><input id="mapHeight" type="number" name="mapHeight" value="12" />
-    <button name="generateMap">Generate</button>
+    <button name="generateMap">Resize</button>
 </fieldset>
 <script id="template-controls" type="text/html">
+<fieldset id="mobOptions">
+    <legend>Add NPC</legend>
+    <ul class="ctrl-colourOption">
+        <li>
+            <button name="addNpc">+</button>
+            <label for="npcName">Name:</label><input type="text" id="npcName" name="npcName" />
+            <label for="npcInitiative">Initiative:</label><input type="number" id="npcInitiative" name="npcInitiative" />        
+            <label for="npcSize">Size</label><select id="npcSize" name="npcSize"></select>
+        </li>
+    </ul>
+</fieldset>
 <fieldset id="terrainOptions">
     <legend>Add terrain</legend>
-    <select name="terrainType"></select>
-    <label for="terrainWidth">Width</label>
-    <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
-    <label for="terrainLength">Length</label>
-    <input type="number" id="terrainLength" name="terrainLength" value="1" />
-    <button name="addTerrain">Add</button>    
+    <ul class="ctrl-colourOption" name="terrainTypes"></ul>
+    <div>
+        <label for="terrainWidth">Width</label>
+        <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+    </div>
+    <div>
+        <label for="terrainLength">Length</label>
+        <input type="number" id="terrainLength" name="terrainLength" value="1" />
+    </div>
 </fieldset>
+<script id="template-terrainType" type="text/html">
+    <li>
+        <input type="radio" id="terrainType-{type}" name="terrainType" value="{type}" />
+        <label class="{type}" for="terrainType-{type}"></label>
+        <label for="terrainType-{type}">{text}</label>
+    </li>
+</script>
 <button name="clear">Start new combat</button>
 <button name="reset">Reset Entire Session</button>
 </script>
@@ -28,7 +49,7 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function setupScript() {
-    var clear, renderMenu, addTerrain, i,
+    var clear, renderMenu, addTerrain, i, generateMap,
         controlsTemplate, mapCellTemplate;
 
     /**
@@ -36,8 +57,6 @@ loadExternalScript("public/combatMap.js");
      */
     clear = function() {
         var map;
-        document.getElementById("mapWidth").value = "";
-        document.getElementById("mapHeight").value = "";
         pageContext.removeMapEvents();
         map = document.getElementById("map");
         map.removeAttribute("data-width");
@@ -48,7 +67,48 @@ loadExternalScript("public/combatMap.js");
     };
     
     /**
+     * Adds a new MOB to the map.
+     * @param {object} data describing the mob.
+     * @param {DOMEvent} event The click event describing where to add the terrain.
+     */
+    addMob = function(data, event) {
+        var x, y, size, extant, 
+            i, j, el, container;
+        x = parseInt(event.currentTarget.getAttribute("data-x"));
+        y = parseInt(event.currentTarget.getAttribute("data-y"));
+        
+        size = pageContext.mobSizes[data.size];
+        extant = pageContext.getMob(x, y);
+
+        for (i = 0; i < (extant ? extant.length : 0); i++) {
+            // TODO - figure out the rules for this.
+            // "a creature cannot enter the same space of another of the same size or smaller?"
+            // Not quite right, but gives something to work with.
+            if (size.rank <= pageContext.mobSizes[extant[i].size].rank) {
+                return
+            }
+        }
+        
+        maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
+        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));        
+
+        for (i = x; i < x + size.tiles && i <= maxX; i++) {
+            for (j = y; j < y + size.tiles && j <= maxY; j++) {
+                // Needs A LOT of design work on what to do with larger creatures & multiple 
+                // creatures on a tile...
+                pageContext.setMob(i, j, data);
+                el = document.createElement("button");
+                // el.setAttribute("data-mobId", data.id);
+                el.style.backgroundColor = data.colour || "#EEEEEE";
+                container = pageContext.getCell(i, j);
+                container.parentNode.appendChild(el);
+            }
+        }
+    };
+
+    /**
      * Adds a terrain to the map.
+     * @param {DOMEvent} event The click event describing where to add the terrain.
      */
     addTerrain = function(event) {
         var x, y, X, Y, width, height, type,
@@ -58,7 +118,7 @@ loadExternalScript("public/combatMap.js");
         y = parseInt(event.currentTarget.getAttribute("data-y"));
         width = parseInt(document.querySelector("[name='terrainWidth']").value);
         height = parseInt(document.querySelector("[name='terrainLength']").value);
-        type = document.querySelector("[name='terrainType']").value;
+        type = document.querySelector("[name='terrainType']:checked").value;
         
         // Temporary until I figure out what to do vis-a-vis code reuse.
         maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
@@ -73,36 +133,68 @@ loadExternalScript("public/combatMap.js");
         }
     };
     
-    onEvent("button[name='generateMap']", "click", function() {
+    /**
+     * Generates a grid based on the user's request.
+     */
+    generateMap = function() {
         var width, height;
-        width = parseInt(document.querySelector("input[name='mapWidth']").value, 10);
-        height = parseInt(document.querySelector("input[name='mapHeight']").value, 10);
+        width = parseInt(document.querySelector("input[name='mapWidth']").value);
+        height = parseInt(document.querySelector("input[name='mapHeight']").value);
         clear();
         pageContext.renderMap({
             width: width,
             height: height
         }, mapCellTemplate);
-    });
+    };
+    onEvent("button[name='generateMap']", "click", generateMap);
     
-    document.body.setAttribute("data-state", "setup");
-    controlsTemplate = document.getElementById("template-controls").innerHTML;
-    mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
-    
+    /**
+     * Renders controls in the menu container.
+     */
     renderMenu = function() {
         var menu, el, i, option;
         menu = document.getElementById("controls");
         menu.insertAdjacentHTML("beforeend", controlsTemplate);   
-        el = menu.querySelector("#terrainOptions > select[name='terrainType']");
-        for (i in pageContext.terrainTypes) {
+
+        // NPC creature sizes.
+        el = menu.querySelector("#mobOptions [name='npcSize']");
+        for (i in pageContext.mobSizes) {
             option = document.createElement("option");
-            option.innerHTML = pageContext.terrainTypes[i].text;
-            option.value = i;
-            if (i === "difficult") {
-                option.selected = true;
-            }
-            el.appendChild(option);            
+            option.setAttribute("value", i);
+            option.innerHTML = pageContext.mobSizes[i].text;
+            option.selected = (i === "medium");
+            el.appendChild(option);
         }
-        onEvent("button[name='addTerrain']", "click", function() {
+
+        el = menu.querySelector("#terrainOptions > ul[name='terrainTypes']");
+        // Terrain type radio buttons.
+        for (i in pageContext.terrainTypes) {
+            option = document.getElementById("template-terrainType").innerHTML;             
+            option = option.replace(/{type}/g, i)
+                .replace(/{text}/g, pageContext.terrainTypes[i].text);
+            el.insertAdjacentHTML("beforeend", option);
+        }
+
+        onEvent("button[name='addNpc']", "click", function() {
+            var name, init, size;
+            name = document.querySelector("[name='npcName']").value;
+            init = parseInt(document.querySelector("[name='npcInitiative']").value)
+            size = document.querySelector("[name='npcSize']").value;
+            
+            // Can't add NPC if missing info.
+            if (!name || isNaN(init)) {
+                return;
+            }
+            pageContext.removeMapEvents();
+            pageContext.onMapEvent("td > button", "click", addMob.bind({}, {
+                isNPC : true,
+                name : name,
+                initiative : init,
+                size: size
+            }));
+        });
+
+        onEvent("input[name='terrainType']", "change", function() {
             pageContext.removeMapEvents();            
             pageContext.onMapEvent("td > button", "click",  addTerrain);
         });
@@ -122,10 +214,15 @@ loadExternalScript("public/combatMap.js");
             }
             delete window.sessionId;
         });        
-    };
+    };    
+    
+    document.body.setAttribute("data-state", "setup");
+    controlsTemplate = document.getElementById("template-controls").innerHTML;
+    mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
     
     wait(function() {
         if (pageContext.terrainTypes) {
+            generateMap();
             renderMenu();
             return true;
         } else {

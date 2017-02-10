@@ -19,10 +19,19 @@ body {
         display: table-row;
         height: 300px;
     }
+    
+    body > aside > * > section {
+        display: table-cell;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
 
 
 
 ol.initiativeList {
+    list-style-type: none;
+    padding-top: 10px;
+    padding-left: 0;
 }
 
     body[data-state='lobby'] ol.initiativeList > li {}
@@ -51,21 +60,33 @@ ol.initiativeList {
     
 td.ctrl-combatCell {
     padding: 0;
+    position: relative;
 }
 
-    td.ctrl-combatCell > button {
+    td.ctrl-combatCell > button:first-child {
         height: 100%;
         width: 100%;
         border-width: 0;
         background-color: inherit;
     }
 
-    td.ctrl-combatCell > button:focus,
-    td.ctrl-combatCell > button:active {
+    td.ctrl-combatCell > button:first-child:focus,
+    td.ctrl-combatCell > button:first-child:active {
         background-color: rgba(0,0,0,0.2);
     }
-    td.ctrl-combatCell > button:hover {
+    td.ctrl-combatCell > button:first-child:hover {
         background-color: rgba(0,0,0,0.1);    
+    }
+    
+    td.ctrl-combatCell > button + button {
+        position: absolute;
+        width: 50%;
+        height: 50%;
+        left: 25%;
+        top: 25%;
+        border-color: black;
+        border-style: solid;
+        border-width: 1px;
     }        
 
 table.ctrl-combatMap {
@@ -107,10 +128,16 @@ table.ctrl-combatMap {
         border-top-style: solid;
     }
 
+ul.ctrl-colourOption {
+    padding-left: 0;
+    list-style-type: none;
+}
+
 
 .ctrl-colourOption > input {
     display: none;
 }
+
     .ctrl-colourOption > label {
         display: inline-block;
     }

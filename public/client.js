@@ -17,11 +17,18 @@ var a = function() {
      * @param {function} callback when event is fired.
      */
     onEvent = function(target, event, handler) {
+        var i;
         if (typeof target === "string") {
-            target = document.querySelector(target);
+            target = document.querySelectorAll(target);
         }
-        target.addEventListener(event, handler);
-        _pageEvents.push(target.removeEventListener.bind(target, event, handler));
+        if (!target.length) {
+            target = [target];
+        }
+        for (i = 0; i < target.length; i++) {
+            target[i].addEventListener(event, handler);
+            _pageEvents.push(target[i].removeEventListener.bind(target[i], event, handler));        
+        }
+
     };
     
     /**
@@ -174,8 +181,9 @@ var replaceBody = function(url, container, data, options) {
        if (result) {
            if (!result.responseText) {
                console.error(JSON.stringify(result));
+           } else {
+               console.error(result.responseText);
            }
-           console.error(result.responseText);
        } else {
            console.trace();
        }

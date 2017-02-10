@@ -1,8 +1,9 @@
-<h2>Ready Players</h2>
-<div>Waiting for DM</div>
-<ol class="initiativeList">
-</ol>
-<script id="template-initiativeListItem"type="text/html">
+<section>
+    <h2>Ready Players</h2>
+    <div>Waiting for DM</div>
+    <ol class="initiativeList"></ol>
+</section>
+<script id="template-initiativeListItem" type="text/html">
 <li data-id="" data-mob_type="">
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
@@ -52,12 +53,12 @@
     };
     
     addDM = function(data) {
-        var el = document.querySelector("#social > div");
+        var el = document.querySelector("#social > section > div");
         el.innerHTML = "DM is " + data.player_name;
     };
     
     removeDM = function(data) {
-        var el = document.querySelector("#social > div");
+        var el = document.querySelector("#social > section > div");
         el.innerHTML = "Waiting for DM";     
     };
     
@@ -69,7 +70,7 @@
     };
     
     removeAll = function() {
-        var list = document.querySelector("#social > div > ul")
+        var list = document.querySelector("#social > section > div > ul")
         while (list.firstChild) {
             list.removeChild(list.firstChild);
         }
@@ -81,7 +82,7 @@
         if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
             return;
         }
-        list = document.querySelector("#social > ol.initiativeList");
+        list = document.querySelector("#social ol.initiativeList");
         list.insertAdjacentHTML("beforeend", template);
         li = list.lastElementChild;
         li.style.color = "#" + data.colour;
