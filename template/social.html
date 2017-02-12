@@ -10,7 +10,7 @@
     <span class="usedReaction">No</span>
     <button name="position">loc</span>
     <button name="react">react</button>
-    <button name="toggleMob">0HP</button>
+    <button name="toggleMob">x</button>
 </li>
 </script>
 <script type="application/javascript">
@@ -65,6 +65,7 @@ window.initiativeContext = {};
             data = {};
             data.id = li.getAttribute("data-id");
             data.size = li.getAttribute("data-size");
+            data.mob_type = li.getAttribute("data-mobtype");
             data.colour = li.style.color;
             data.character_name = li.querySelector(".mobName").innerHTML;
             
@@ -176,6 +177,7 @@ window.initiativeContext = {};
     
     window.socket.addEventListener("message", onReceiveMessage);
     window.initiativeContext.addMob = addPlayer;
+    window.initiativeContext.removeMob = removePlayer;
 
     /**
      * Subscribes to an event triggered by some operation or interation on the list.

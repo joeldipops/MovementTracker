@@ -161,42 +161,60 @@
      * Sets a mob as part of a given cell.
      * @param {number} x co-ordinate of the cell.
      * @param {number} y co-ordinate of the cell.
-     * @param {object} mob data describing the mob.
+     * @param {object} data describing the mob.
      */
-    pageContext.setMob = function(x, y, mob) {
-         if (!_mobs[x]) {
-             _mobs[x] = {};
-         }
-         if (!_mobs[x][y]) {
-             _mobs[x][y] = [];
-         }
+    pageContext.setMob = function(x, y, data) {
+        var el;
+        if (!data || !data.id) {
+            return;
+        }
+        if (!_mobs[x]) {
+            _mobs[x] = {};
+        }
+        if (!_mobs[x][y]) {
+            _mobs[x][y] = [];
+        }
          
-         mob.x = x;
-         mob.y = y;
-         _mobs[x][y].push(mob);
-         _mobIndex[mob.id] = { x : x, y : y };
+        data.x = x;
+        data.y = y;
+        _mobs[x][y].push(data);
+        _mobIndex[data.id] = { x : x, y : y };
+
+        el = document.createElement("button");
+        el.setAttribute("data-id", data.id);
+        el.setAttribute("title", data.character_name);
+        el.style.backgroundColor = data.colour || "#EEEEEE";
+        container = pageContext.getCell(x, y);
+        container.parentNode.appendChild(el);         
     };
     
     /**
-     * Remove record of a mob from the cache.
+     * Removes a mob from the map
      */
-    pageContext.removeMob = function(mob) {
-        var array, i;
-        
-        if (!(mob.x && mob.y)) {
-            mob = pageContext.getMobWithId(mob.id);
-        }
-        delete _mobIndex[mob.id];
-        if (!mob || !(mob.x && mob.y)) {
+    pageContext.removeMob = function(data) {
+        var cell, mobEl, array, i;
+        if (!data || !data.id) {
             return;
         }
-
-        array = pageContext.getMobs(mob.x, mob.y);
+        if (!(data.x && data.y)) {
+            data = pageContext.getMobWithId(data.id);
+        }
+        if (!data || !(data.x && data.y)) {
+            return;
+        }
+        delete _mobIndex[data.id];        
+        array = pageContext.getMob(data.x, data.y);
         for (i = 0; i < array.length; i++) {
-            if (isSameMob(array[i], mob)) {
-               break;
+            if (isSameMob(array[i], data)) {
+                break;
             }
         }
-        array.splice(i, 1);
-    }
+        array.splice(i, 1);                 
+        
+        cell = pageContext.getCell(data.x, data.y);
+        mobEl = cell.parentElement.querySelector("button[data-id='" + data.id + "']");
+        if (mobEl) {
+            mobEl.parentNode.removeChild(mobEl);
+        }
+    };    
 })();

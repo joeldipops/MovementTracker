@@ -1,19 +1,30 @@
 <table id="map" class="ctrl-combatMap" data-state=""></table>
-<fieldset>
+<script id="template-controls" type="text/html">
+<fieldset id="mapOptions">
     <legend>Set Map</legend>
-    <label for="mapWidth">Width:</label><input id="mapWidth" type="number" name="mapWidth" value="12" />
-    <label for="mapHeight">Height:<label><input id="mapHeight" type="number" name="mapHeight" value="12" />
+    <label for="mapWidth">Width</label>
+    <input id="mapWidth" type="number" name="mapWidth" value="12" />
+    <label for="mapHeight">Height<label>
+    <input id="mapHeight" type="number" name="mapHeight" value="12" />
     <button name="generateMap">Resize</button>
 </fieldset>
-<script id="template-controls" type="text/html">
 <fieldset id="mobOptions">
     <legend>Add NPC</legend>
     <ul class="ctrl-colourOption">
         <li>
             <button name="addNpc">+</button>
-            <label for="npcName">Name:</label><input type="text" id="npcName" name="npcName" />
-            <label for="npcInitiative">Initiative:</label><input type="number" id="npcInitiative" name="npcInitiative" value="10" />        
-            <label for="npcSize">Size</label><select id="npcSize" name="npcSize"></select>
+            <div>
+                <label for="npcName">Name</label>
+                <input type="text" id="npcName" name="npcName" />
+            </div>
+            <div>
+                <label for="npcInitiative">Initiative</label>
+                <input type="number" id="npcInitiative" name="npcInitiative" value="10" />
+            </div>
+            <div>
+                <label for="npcSize">Size</label>
+                <select id="npcSize" name="npcSize"></select>
+            </div>
         </li>
     </ul>
 </fieldset>
@@ -29,15 +40,15 @@
         <input type="number" id="terrainLength" name="terrainLength" value="1" />
     </div>
 </fieldset>
+<button name="clear">Start new combat</button>
+<button name="reset">Reset Entire Session</button>
+</script>
 <script id="template-terrainType" type="text/html">
     <li>
         <input type="radio" id="terrainType-{type}" name="terrainType" value="{type}" />
         <label class="{type}" for="terrainType-{type}"></label>
         <label for="terrainType-{type}">{text}</label>
     </li>
-</script>
-<button name="clear">Start new combat</button>
-<button name="reset">Reset Entire Session</button>
 </script>
 <script id="template-combatCell" type="text/html">
 <td class="ctrl-combatCell">
@@ -51,6 +62,7 @@ loadExternalScript("public/combatMap.js");
 (function setupScript() {
     var i, 
         clear, renderMenu, addTerrain, addMob, moveMob, removeMob, generateMap,
+        onPositionClicked,
         controlsTemplate, mapCellTemplate;
 
     /**
@@ -75,21 +87,11 @@ loadExternalScript("public/combatMap.js");
         var mob;
         mob = pageContext.getMobWithId(data.id);
         if (mob) {
-            removeMob(mob);
+            pageContext.removeMob(mob);
         }
-        addMob(data, event)
+        addMob(clone(data), event)
     };
     
-    /**
-     * Removes a mob from the map
-     */
-     removeMob = function(data) {
-         var cell, mobEl;
-         cell = pageContext.getCell(data.x, data.y);
-         mobEl = cell.parentElement.querySelector("button[data-id='" + data.id + "']");
-         mobEl.parentNode.removeChild(mobEl);
-     };
-
     /**
      * Adds a new MOB to the map.
      * @param {object} data describing the mob.
@@ -97,15 +99,18 @@ loadExternalScript("public/combatMap.js");
      */
     addMob = function(data, event) {
         var x, y, size, extant, 
-            i, j, el, container;
+            i, j, el, container, orig;
             
+        orig = data;
         data = clone(data);
+        // only use this ID the first time.
+        delete orig.id 
+
         if (!data.id) {
             data.id = (new Date()).valueOf().toString();
+            initiativeContext.addMob(data);             
         }
         
-        initiativeContext.addMob(data);
-            
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
         
@@ -129,12 +134,6 @@ loadExternalScript("public/combatMap.js");
                 // Needs A LOT of design work on what to do with larger creatures & multiple 
                 // creatures on a tile...
                 pageContext.setMob(i, j, data);
-                el = document.createElement("button");
-                el.setAttribute("data-id", data.id);
-                el.setAttribute("title", data.character_name);
-                el.style.backgroundColor = data.colour || "#EEEEEE";
-                container = pageContext.getCell(i, j);
-                container.parentNode.appendChild(el);
             }
         }
     };
@@ -179,7 +178,11 @@ loadExternalScript("public/combatMap.js");
             height: height
         }, mapCellTemplate);
     };
-    onEvent("button[name='generateMap']", "click", generateMap);
+    
+    onPositionClicked = function(data) {
+        pageContext.removeMapEvents();
+        pageContext.onMapEvent("td > button", "click", moveMob.bind({}, data));
+    };
     
     /**
      * Renders controls in the menu container.
@@ -219,18 +222,32 @@ loadExternalScript("public/combatMap.js");
             if (!name || isNaN(init)) {
                 return;
             }
-            pageContext.removeMapEvents();
-            pageContext.onMapEvent("td > button", "click", addMob.bind({}, {
+
+            data = {
                 character_name : name,
                 initiative : init,
-                size: size
-            }));
+                size: size,
+                id : (new Date()).valueOf().toString()
+            };
+            
+            initiativeContext.addMob(data);            
+
+            pageContext.removeMapEvents();
+            // the data that we bind the the map event 
+            pageContext.onMapEvent("td > button", "click", addMob.bind({}, data));
         });
         
         // When position/location button is clicked for a mob, we can select a cell.
-        initiativeContext.onListEvent("position", function(data) {
-            pageContext.removeMapEvents();
-            pageContext.onMapEvent("td > button", "click", moveMob.bind({}, data));
+        initiativeContext.onListEvent("position", onPositionClicked);
+        
+        // When in set up mode, deleting an NPC gets rid of it completely.
+        initiativeContext.onListEvent("toggleMob", function(data) {
+            pageContext.removeMob(data);
+            if (data.mob_type === "npc") {
+                initiativeContext.removeMob(data);
+            } else {
+                onPositionClicked(data);
+            }
         });
 
         // When terrain type is selected, we can add a terrain to a cell.
@@ -238,6 +255,9 @@ loadExternalScript("public/combatMap.js");
             pageContext.removeMapEvents();            
             pageContext.onMapEvent("td > button", "click",  addTerrain);
         });
+
+       onEvent("button[name='generateMap']", "click", generateMap);        
+        
         onEvent("button[name='clear']", "click", clear)
 
         onEvent("button[name='reset']", "click", function() {
@@ -262,8 +282,8 @@ loadExternalScript("public/combatMap.js");
     
     wait(function() {
         if (pageContext.terrainTypes) {
-            generateMap();
             renderMenu();
+            generateMap();
             return true;
         } else {
             return false;
