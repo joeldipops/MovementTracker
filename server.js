@@ -89,7 +89,8 @@ function putPlayer(req, res) {
             player_id : result.rows[0].playerid,
             socket_id : req.body.socket_id,
             player_type : req.body.player_type,
-            colour: req.body.colour
+            colour: req.body.colour,
+            size : req.body.size || "medium"
         });
         if (!playerId) {
             switch(req.body.player_type) {
@@ -102,7 +103,8 @@ function putPlayer(req, res) {
                 character_name: req.body.character_name,
                 player_id: player.player_id,
                 session_id: sessionId,
-                colour: player.colour
+                colour: player.colour,
+                size: player.size
             };
             socketServerControl.broadcastJSON(message);
         }
@@ -162,7 +164,8 @@ function getPlayerList(req, res) {
                 player_name: result.rows[i].playername,
                 character_name: result.rows[i].charactername,
                 player_type: result.rows[i].playertype,
-                colour: result.rows[i].colour
+                colour: result.rows[i].colour,
+                size: result.rows[i].size
             });
         }
         

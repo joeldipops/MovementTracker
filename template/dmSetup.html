@@ -12,7 +12,7 @@
         <li>
             <button name="addNpc">+</button>
             <label for="npcName">Name:</label><input type="text" id="npcName" name="npcName" />
-            <label for="npcInitiative">Initiative:</label><input type="number" id="npcInitiative" name="npcInitiative" />        
+            <label for="npcInitiative">Initiative:</label><input type="number" id="npcInitiative" name="npcInitiative" value="10" />        
             <label for="npcSize">Size</label><select id="npcSize" name="npcSize"></select>
         </li>
     </ul>
@@ -49,7 +49,8 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function setupScript() {
-    var clear, renderMenu, addTerrain, i, generateMap,
+    var i, 
+        clear, renderMenu, addTerrain, addMob, moveMob, removeMob, generateMap,
         controlsTemplate, mapCellTemplate;
 
     /**
@@ -66,6 +67,29 @@ loadExternalScript("public/combatMap.js");
         }
     };
     
+
+    /** 
+     * Moves mob with id from one location to another
+     */
+    moveMob = function(data, event) {
+        var mob;
+        mob = pageContext.getMobWithId(data.id);
+        if (mob) {
+            removeMob(mob);
+        }
+        addMob(data, event)
+    };
+    
+    /**
+     * Removes a mob from the map
+     */
+     removeMob = function(data) {
+         var cell, mobEl;
+         cell = pageContext.getCell(data.x, data.y);
+         mobEl = cell.parentElement.querySelector("button[data-id='" + data.id + "']");
+         mobEl.parentNode.removeChild(mobEl);
+     };
+
     /**
      * Adds a new MOB to the map.
      * @param {object} data describing the mob.
@@ -74,6 +98,14 @@ loadExternalScript("public/combatMap.js");
     addMob = function(data, event) {
         var x, y, size, extant, 
             i, j, el, container;
+            
+        data = clone(data);
+        if (!data.id) {
+            data.id = (new Date()).valueOf().toString();
+        }
+        
+        initiativeContext.addMob(data);
+            
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
         
@@ -98,7 +130,8 @@ loadExternalScript("public/combatMap.js");
                 // creatures on a tile...
                 pageContext.setMob(i, j, data);
                 el = document.createElement("button");
-                // el.setAttribute("data-mobId", data.id);
+                el.setAttribute("data-id", data.id);
+                el.setAttribute("title", data.character_name);
                 el.style.backgroundColor = data.colour || "#EEEEEE";
                 container = pageContext.getCell(i, j);
                 container.parentNode.appendChild(el);
@@ -175,6 +208,7 @@ loadExternalScript("public/combatMap.js");
             el.insertAdjacentHTML("beforeend", option);
         }
 
+        // When add npc is clicked, we can select a cell to add them to.
         onEvent("button[name='addNpc']", "click", function() {
             var name, init, size;
             name = document.querySelector("[name='npcName']").value;
@@ -187,13 +221,19 @@ loadExternalScript("public/combatMap.js");
             }
             pageContext.removeMapEvents();
             pageContext.onMapEvent("td > button", "click", addMob.bind({}, {
-                isNPC : true,
-                name : name,
+                character_name : name,
                 initiative : init,
                 size: size
             }));
         });
+        
+        // When position/location button is clicked for a mob, we can select a cell.
+        initiativeContext.onListEvent("position", function(data) {
+            pageContext.removeMapEvents();
+            pageContext.onMapEvent("td > button", "click", moveMob.bind({}, data));
+        });
 
+        // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {
             pageContext.removeMapEvents();            
             pageContext.onMapEvent("td > button", "click",  addTerrain);

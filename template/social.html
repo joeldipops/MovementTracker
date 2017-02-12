@@ -4,7 +4,7 @@
     <ol class="initiativeList"></ol>
 </section>
 <script id="template-initiativeListItem" type="text/html">
-<li data-id="" data-mob_type="">
+<li data-id="" data-mobType="">
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
     <span class="usedReaction">No</span>
@@ -14,10 +14,15 @@
 </li>
 </script>
 <script type="application/javascript">
+window.initiativeContext = {};
 (function socialScript() {
-    var onReceiveMessage, onClose, 
+    var onReceiveMessage, onClose, bindInputEvents,
         addPlayer, removePlayer, addDM, removeDM,
-        template;
+        template, _listEl, _subscribers, _events;
+        
+    _listEl = document.querySelector("#social ol.initiativeList");
+    _subscribers = {};
+    _events = [];
 
     template = document.querySelector("#template-initiativeListItem").innerHTML;        
     
@@ -26,10 +31,52 @@
      */
     onClose = function() {
         window.socket.removeEventListener("message", onReceiveMessage);
+        _subscribers = {};
+        
+        for (i = 0; i < _events.length; i++) {
+            _events[i]();
+        }
+        _events = [];
     };
+    
+    /**
+     * Ensures click etc events will fire for each item in the list.
+     * @param {HTMLElement} The list item with buttons to bind.
+     */
+     bindInputEvents = function(li) {
+         var buttons, handler;
+         buttons = li.querySelectorAll("button");
+         handler = fireEvent.bind({}, li);
+         for (i = 0; i < buttons.length; i++) {
+             buttons[i].addEventListener("click", handler);
+             _events.push(buttons[i].removeEventListener.bind(buttons[i], "click", handler));
+         }
+     };
+     
+     /**
+      * Calls subscribing callbacks.
+      * @param {HTMLElement} li parentNode of the clicked element.
+      * @param {DOMElement} event that occured.
+      */
+     fireEvent = function(li, event) {
+         var name, data, i;
+         name = event.currentTarget.getAttribute("name");
+         if (_subscribers[name] && _subscribers[name].length) {
+            data = {};
+            data.id = li.getAttribute("data-id");
+            data.size = li.getAttribute("data-size");
+            data.colour = li.style.color;
+            data.character_name = li.querySelector(".mobName").innerHTML;
+            
+            for (i = 0; i < _subscribers[name].length; i++) {
+                _subscribers[name][i](data);
+            }
+         }
+     };
 
     /**
      * Handles messages received through the web socket.
+     * @param {object} event that occured.
      */
     onReceiveMessage = function(event) {
         var data, el;
@@ -63,32 +110,39 @@
     };
     
     removePlayer = function(data) {
-        var li;
-        if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
+        var li, id;
+        id = isNaN(data.player_id) ? data.id : data.player_id;
+        if (li = _listEl.querySelector("li[data-id='" + id + "']")) {
             li.parentElement.removeChild(li);
         }
     };
     
     removeAll = function() {
-        var list = document.querySelector("#social > section > div > ul")
-        while (list.firstChild) {
-            list.removeChild(list.firstChild);
+        while (_listEl.firstChild) {
+            _listEl.removeChild(_listEl.firstChild);
         }
     };
     
     addPlayer = function(data) {
         var list, li;
+        if (!isNaN(data.player_id)) {
+            data.id = data.player_id
+        }
         // Don't add same player more than once.
-        if (li = document.querySelector("#social li[data-id='" + data.player_id + "']")) {
+        if (li = _listEl.querySelector("li[data-id='" + data.id + "']")) {
             return;
         }
-        list = document.querySelector("#social ol.initiativeList");
-        list.insertAdjacentHTML("beforeend", template);
-        li = list.lastElementChild;
+
+        _listEl.insertAdjacentHTML("beforeend", template);
+        li = _listEl.lastElementChild;
         li.style.color = "#" + data.colour;
-        
-        li.setAttribute("data-id", data.player_id);
+        li.setAttribute("data-id", data.id);
+        li.setAttribute("data-mobType", isNaN(data.player_id) ? "npc" : "pc");
+        li.setAttribute("data-size", data.size);
         li.querySelector(".mobName").innerHTML = data.character_name;
+        li.querySelector(".initiativeScore").innerHTML = data.initiative;
+        
+        bindInputEvents(li);
     };
 
     /**
@@ -121,6 +175,36 @@
     }
     
     window.socket.addEventListener("message", onReceiveMessage);
+    window.initiativeContext.addMob = addPlayer;
+
+    /**
+     * Subscribes to an event triggered by some operation or interation on the list.
+     * @param {string} event The name of the event.
+     * @param {function} handler The callback.
+     */
+    window.initiativeContext.onListEvent = function(event, handler) {
+        if (!_subscribers[event]) {
+            _subscribers[event] = [];
+        }
+        
+        _subscribers[event].push(handler);
+    };
+    
+    /**
+     * Removes a handler from the list of subscribers.
+     * @param {string} event to unsubsribe from.
+     * @param {function} handler to remove.
+     */
+    window.initiativeContext.offListEvent = function(event, handler) {
+        var i;
+        if (!_subscribers[event]) {
+            return;
+        }
+        
+        if((i = _subscribers[event].indexOf(handler)) >= 0) {
+            _subscribers[event].splice(i, 1);
+        }
+    };
 })();
 
 </script>

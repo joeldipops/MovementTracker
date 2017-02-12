@@ -1,9 +1,24 @@
 (function combatMapScript() {
-    var _mapEvents, _mapEl, _mobs;
+    var _mapEvents, _mapEl, _mobs, _mobIndex, isIdEqual;
     
     _mapEvents = [];
     _mapEl = document.getElementById("map");    
     _mobs = {};
+    _mobIndex = {};
+    
+    /**
+     * Compares mobs by id..
+     * @param {object} first mob to compare.
+     * @param {object} second mob to compare.
+     * @returns {boolean} true if same id, false otherwise.
+     */
+    isSameMob = function(first, second) {
+        if (!first || !second) {
+            return false;
+        }        
+
+        return first.id.toString() === second.id.toString();
+    }
 
     /**
      * Renders a grid according to data, setting each td as the html in template.
@@ -28,6 +43,7 @@
             _mapEL.appendChild(newTr);
             for (x = 0; x < data.width + 1; x++) {
                 if (y === 0 || x === 0) {
+                   // Numbered headings along the top and left.
                     newTd = document.createElement("th");
                     if (x !== 0) {
                         newTd.setAttribute("scope", "column");
@@ -39,6 +55,7 @@
                     }
                     newTr.appendChild(newTd);                    
                 } else {
+                    // Main cells.
                     newTr.insertAdjacentHTML("beforeend", template);
                     button = newTr.lastElementChild.querySelector("button");
                     button.setAttribute("data-x", x);
@@ -102,21 +119,42 @@
         tiny : { text: "Tiny", tiles: 1, rank : 1 },
         small : { text: "Small", tiles: 1, rank : 2 },
         medium: { text: "Medium", tiles: 1, rank: 3 },
-        large : { text : "Large", tiles: 2, rank: 4 },
-        huge : { text : "Huge", tiles: 3, rank: 5},
-        colossal: { text: "Colossal", tiles: 4, rank: 6 }
+        large : { text : "Large", tiles: 1, rank: 4 },
+        huge : { text : "Huge", tiles: 1, rank: 5},
+        colossal: { text: "Colossal", tiles: 1, rank: 6 }
     };
     
     /**
      * Gets mobs partially or fully in a given cell.
      * @param {number} x co-ordinate of the cell.
      * @param {number} y co-ordinate of the cell.
+     * @returns {object} The mob, if it exists.
      */
     pageContext.getMob = function(x, y) {
         if (_mobs[x]) {
             return _mobs[x][y];
         }
         return null;
+    };
+    
+    /**
+     * Gets mob on the map with a given id.
+     * @param {number} id of the mob.
+     * @returns {object} The mob.
+     */
+    pageContext.getMobWithId = function(id) {
+        var i, array;
+        
+        if (!_mobIndex[id]) {
+            return null;
+        }
+        
+        array = pageContext.getMob(_mobIndex[id].x, _mobIndex[id].y);        
+        for (i = 0; i < array.length; i++) {
+            if (isSameMob(array[i], { id : id})) {
+                return array[i];
+            }
+        }
     };
     
     /**
@@ -133,6 +171,32 @@
              _mobs[x][y] = [];
          }
          
+         mob.x = x;
+         mob.y = y;
          _mobs[x][y].push(mob);
+         _mobIndex[mob.id] = { x : x, y : y };
     };
+    
+    /**
+     * Remove record of a mob from the cache.
+     */
+    pageContext.removeMob = function(mob) {
+        var array, i;
+        
+        if (!(mob.x && mob.y)) {
+            mob = pageContext.getMobWithId(mob.id);
+        }
+        delete _mobIndex[mob.id];
+        if (!mob || !(mob.x && mob.y)) {
+            return;
+        }
+
+        array = pageContext.getMobs(mob.x, mob.y);
+        for (i = 0; i < array.length; i++) {
+            if (isSameMob(array[i], mob)) {
+               break;
+            }
+        }
+        array.splice(i, 1);
+    }
 })();

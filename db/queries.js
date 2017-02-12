@@ -29,23 +29,12 @@ LIMIT 1
     ;`,
 
     createPlayer: `
-INSERT INTO Player (WebSessionId, PlayerName, CharacterName, PlayerType, Colour)
-VALUES ($1, $2, $3, $4, $5)
-RETURNING PlayerId
-    ;`,
+SELECT CreatePlayer($1, $2, $3, $4, $5) AS PlayerId;
+    `,
 
     updatePlayer: `
-UPDATE Player Pl
-SET
-    WebSessionId = coalesce($2, P.WebSessionId),
-    PlayerName = coalesce($3, P.PlayerName),
-    CharacterName = coalesce($4, P.CharacterName),
-    PlayerType = coalesce($5, P.PlayerType),
-    Colour = coalesce($6, P.Colour)
-FROM Player P
-WHERE Pl.PlayerId = $1
-RETURNING Pl.PlayerId
-    ;`,
+SELECT UpdatePlayer($1, $2, $3, $4, $5) AS PlayerId;
+    `,
 
     deletePlayer: `
 DELETE FROM Player
@@ -54,12 +43,18 @@ WHERE PlayerId = $1
     
     getPlayers: `
 SELECT 
-    PlayerId,
-    PlayerName,
-    CharacterName,
-    PlayerType,
-    Colour
-FROM Player
+    P.PlayerId,
+    P.PlayerName,
+    P.PlayerType,
+    P.Colour,
+    PC.CharacterName,    
+    R.SizeCode AS Size
+FROM Player P
+    INNER JOIN PlayerCharacter PC
+    ON PC.PlayerId = P.PlayerId
+    
+    INNER JOIN Race R
+    ON R.RaceId = PC.RaceId
 WHERE WebSessionId = $1
     AND ($2 IS NULL OR PlayerType = $2)
     ;`

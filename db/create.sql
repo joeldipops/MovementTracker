@@ -45,7 +45,11 @@ ALTER DEFAULT PRIVILEGES
     TO DungeonsAndDragonsApp;   
     
 CREATE TYPE playerType
-   AS ENUM ('player', 'dm', 'spectator');
+    AS ENUM ('player', 'dm', 'spectator');
+
+CREATE TYPE creatureSize
+    AS ENUM ('tiny', 'small', 'medium', 'large', 'huge', 'colossal');
+    
     
 CREATE TABLE WebSession (
     WebSessionId serial NOT NULL,
@@ -56,11 +60,21 @@ CREATE TABLE WebSession (
     CONSTRAINT PK_WebSession PRIMARY KEY (WebSessionId)
 );
 
+CREATE TABLE Race (
+    RaceId serial NOT NULL,
+    Name text NOT NULL,
+    Code text NOT NULL,
+    SizeCode creatureSize NOT NULL
+        CONSTRAINT DF_Race_SizeCode
+        DEFAULT ('medium'),
+    
+    CONSTRAINT PK_Race PRIMARY KEY (RaceId)
+);
+
 CREATE TABLE Player (
     PlayerId serial NOT NULL,
     WebSessionId integer NOT NULL,
     PlayerName text NOT NULL,
-    CharacterName text NULL,
     PlayerType playerType NOT NULL
         CONSTRAINT DF_Player_IsDm
         DEFAULT ('player'),
@@ -74,4 +88,85 @@ CREATE TABLE Player (
         REFERENCES WebSession (WebSessionId)
         ON DELETE CASCADE
 );
+
+CREATE TABLE PlayerCharacter (
+    CharacterId serial NOT NULL,
+    PlayerId integer NOT NULL,
+    RaceId integer NOT NULL,
+    CharacterName text NULL,
     
+    CONSTRAINT PK_PlayerCharacter PRIMARY KEY (CharacterId),
+    CONSTRAINT FK_PlayerCharacter_Player
+        FOREIGN KEY (PlayerId)
+        REFERENCES Player (PlayerId)
+        ON DELETE CASCADE,
+        
+    CONSTRAINT FK_PlayerCharacter_Race
+        FOREIGN KEY (RaceId)
+        REFERENCES Race (RaceId)
+);
+
+INSERT INTO Race (Name, Code)
+VALUES ('Human', 'human');
+
+CREATE FUNCTION CreatePlayer(
+    SessionId integer,
+    PlayerName text,
+    CharacterName text,
+    PlayerType playerType,
+    Colour text
+)
+    RETURNS integer AS 
+$BODY$
+    DECLARE
+        _playerId integer;
+BEGIN
+    INSERT INTO Player (WebSessionId, PlayerName, PlayerType, Colour)
+    VALUES (SessionId, PlayerName, PlayerType, Colour)
+    RETURNING PlayerId INTO _playerId;
+    
+    -- If it's a player, add character record too.
+    IF PlayerType = 'player'
+    THEN
+        INSERT INTO PlayerCharacter(PlayerId, RaceId, CharacterName)
+        SELECT 
+            _playerId, RaceId, CharacterName
+        FROM Race
+        WHERE Code = 'human';
+    END IF;
+    
+    RETURN _playerId;
+END;
+$BODY$ LANGUAGE plpgsql;  
+
+CREATE FUNCTION UpdatePlayer(
+    PlayerId integer,
+    SessionId integer,
+    PlayerName text,
+    PlayerType playerType,
+    Colour text
+)
+    RETURNS integer AS
+$BODY$
+BEGIN
+    UPDATE Player Pl
+    SET
+        WebSessionId = coalesce($2, P.WebSessionId),
+        PlayerName = coalesce($3, P.PlayerName),
+        PlayerType = coalesce($5, P.PlayerType),
+        Colour = coalesce($6, P.Colour)
+    FROM Player P
+    WHERE Pl.PlayerId = $1;
+    
+    IF PlayerType = 'player'
+    THEN
+        UPDATE PlayerCharacter PC
+        SET
+            CharacterName = coalesce($4, P.CharacterName)
+        FROM PlayerCharacter P
+        WHERE P.PlayerId = PlayerId;
+    END IF;
+    
+    RETURN PlayerId;      
+END;
+$BODY$ LANGUAGE plpgsql;  

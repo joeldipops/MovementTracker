@@ -62,6 +62,25 @@ var a = function() {
     };
     
     /**
+     * Makes a clone of an object.
+     * @param {object} object
+     * @param {boolean} full also copies the prototype etc. 
+     * @returns {object} the clone.
+     */
+    clone = function(object, full) {
+        var k, result;
+        result = {};
+        
+        for (k in object) {
+            if(!full && !object.hasOwnProperty(k)) {
+                continue;    
+            }
+            result[k] = object[k];
+        }   
+        return result;
+    };
+    
+    /**
      * Calls parse int with the default r value of 10
      * @param {string} value can be parsed into a number.
      * @param {number} r (optional) Just know it should be 10...
