@@ -29,11 +29,11 @@ LIMIT 1
     ;`,
 
     createPlayer: `
-SELECT CreatePlayer($1, $2, $3, $4, $5) AS PlayerId;
+SELECT CreatePlayer($1, $2, $3, $4, $5, $6) AS PlayerId;
     `,
 
     updatePlayer: `
-SELECT UpdatePlayer($1, $2, $3, $4, $5) AS PlayerId;
+SELECT UpdatePlayer($1, $2, $3, $4, $5, $6) AS PlayerId;
     `,
 
     deletePlayer: `
@@ -48,6 +48,7 @@ SELECT
     P.PlayerType,
     P.Colour,
     PC.CharacterName,    
+    PC.Speed,
     R.SizeCode AS Size
 FROM Player P
     INNER JOIN PlayerCharacter PC

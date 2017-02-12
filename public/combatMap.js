@@ -26,13 +26,13 @@
      * @param {string} template a html template.
      */
     pageContext.renderMap = function(data, template) {
-        var x, y,
+        var x, y, key, i,
             newTr, newTd, button;
             
         _mapEL = _mapEl || document.getElementById("map");
     
-        while(_mapEL.nextChild) {
-            _mapEL.removeChild(_mapEL.nextChild);
+        while(_mapEL.firstChild) {
+            _mapEL.removeChild(_mapEL.firstChild);
         }
         
         _mapEl.setAttribute("data-width", data.width);
@@ -60,7 +60,22 @@
                     button = newTr.lastElementChild.querySelector("button");
                     button.setAttribute("data-x", x);
                     button.setAttribute("data-y", y);
-                    button.setAttribute("data-type", "normal");
+                    
+                    key = x + "," + y;  
+                    
+                    // Set any abnormal terrain on this cell.
+                    if (data.terrains && data.terrains[key]) {
+                        pageContext.setTerrain(x, y, data.terrains[key].type);
+                    } else {
+                        button.setAttribute("data-type", "normal");
+                    }
+                    
+                    // Place any mobs on this cell.
+                    if (data.mobs && data.mobs[key]) {
+                        for (i = 0; i < data.mobs[key].length; i++) {
+                            pageContext.setMob(x, y, data.mobs[key][i]);
+                        }
+                    }
                 }
             }
         }
@@ -188,6 +203,12 @@
         container.parentNode.appendChild(el);         
     };
     
+    pageContext.setTerrain = function(x, y, type) {
+        var el = pageContext.getCell(x, y);    
+        el.setAttribute("data-type", type);
+        el.style.backgroundColor = pageContext.terrainTypes[type].colour;
+    };
+    
     /**
      * Removes a mob from the map
      */
@@ -216,5 +237,49 @@
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
         }
-    };    
+    };  
+    
+    /**
+     * Converts map to a transmittable object.
+     * @returns {object} The map as a json object.
+     */
+    pageContext.mapToJSON = function() {
+        var result, k, i, x, y, key,
+            width, height, terrains, mob;
+        width = parseInt(_mapEl.getAttribute("data-width"));
+        height = parseInt(_mapEl.getAttribute("data-height"));
+        result = {
+            width: width,
+            height: height
+        };
+        
+        // Find all the abnormal terrains.
+        terrains = _mapEl.querySelectorAll("button[data-x]:not([data-type='normal'])");
+        result.terrains = {};
+        for (i = 0; i < terrains.length; i++) {
+            x = terrains[i].getAttribute("data-x");
+            y = terrains[i].getAttribute("data-y");
+            result.terrains[x + "," + y] = {
+                type : terrains[i].getAttribute("data-type"),
+                x : x,
+                y: y
+            };
+        }
+        
+        //Find all the mobs.
+        result.mobs = {};
+        for (k in _mobIndex) {
+            if (!_mobIndex.hasOwnProperty(k)) {
+                continue;
+            }
+            key = _mobIndex[k].x + "," + _mobIndex[k].y;
+            if (!result.mobs[key]) {
+                result.mobs[key] = [];
+            }
+            
+            result.mobs[key].push(pageContext.getMobWithId(k));
+        }
+        
+        return result;
+    };
 })();

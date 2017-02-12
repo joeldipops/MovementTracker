@@ -22,6 +22,10 @@
                 <input type="number" id="npcInitiative" name="npcInitiative" value="10" />
             </div>
             <div>
+                <label for="npcSize">Speed</label>
+                <select id="npcSize" name="npcSpeed"></select>
+            </div>            
+            <div>
                 <label for="npcSize">Size</label>
                 <select id="npcSize" name="npcSize"></select>
             </div>
@@ -29,7 +33,7 @@
     </ul>
 </fieldset>
 <fieldset id="terrainOptions">
-    <legend>Add terrain</legend>
+    <legend>Add Terrain</legend>
     <ul class="ctrl-colourOption" name="terrainTypes"></ul>
     <div>
         <label for="terrainWidth">Width</label>
@@ -40,7 +44,8 @@
         <input type="number" id="terrainLength" name="terrainLength" value="1" />
     </div>
 </fieldset>
-<button name="clear">Start new combat</button>
+<strong><button name="start">Start</button></strong>
+<button name="clear">Reset Map</button>
 <button name="reset">Reset Entire Session</button>
 </script>
 <script id="template-terrainType" type="text/html">
@@ -61,7 +66,7 @@ loadExternalScript("public/combatMap.js");
 <script type="application/javascript">
 (function setupScript() {
     var i, 
-        clear, renderMenu, addTerrain, addMob, moveMob, removeMob, generateMap,
+        clear, start, reset, renderMenu, addTerrain, addMob, moveMob, removeMob, generateMap,
         onPositionClicked,
         controlsTemplate, mapCellTemplate;
 
@@ -79,6 +84,40 @@ loadExternalScript("public/combatMap.js");
         }
     };
     
+    start = function() {
+        var requestBody;
+        requestBody = pageContext.mapToJSON();
+        sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
+        .then(function() {
+            return replaceBody("play");
+        })
+        .catch(function(res) {
+            if(res.status) {
+                console.error(res.status, res.responseText);
+            } else {
+                console.error(JSON.stringify(res));
+            }
+        });
+        
+    };
+    
+    /**
+     * Deletes the session and goes back to the lobby page.
+     */
+    reset = function() {
+        if (window.sessionId) {
+            sendHttpRequest("session/" + window.sessionId, "DELETE")
+            .then(function(res) {
+                replaceBody("home", document.documentElement);
+            })
+        .   catch(function(res) {
+                console.error(res.status, res.responseText);
+            });
+        } else {
+            replaceBody("home", document.documentElement);    
+        }
+        delete window.sessionId;
+    };    
 
     /** 
      * Moves mob with id from one location to another
@@ -158,9 +197,7 @@ loadExternalScript("public/combatMap.js");
 
         for (X = x; X < (x + width) && X <= maxX; X++) {
             for(Y = y; Y < (y + height) && Y <= maxY; Y++) {
-                el = pageContext.getCell(X, Y);    
-                el.setAttribute("data-type", type);
-                el.style.backgroundColor = pageContext.terrainTypes[type].colour;
+                pageContext.setTerrain(X, Y, type);
             }
         }
     };
@@ -215,8 +252,7 @@ loadExternalScript("public/combatMap.js");
         onEvent("button[name='addNpc']", "click", function() {
             var name, init, size;
             name = document.querySelector("[name='npcName']").value;
-            init = parseInt(document.querySelector("[name='npcInitiative']").value)
-            size = document.querySelector("[name='npcSize']").value;
+            init = parseInt(document.querySelector("[name='npcInitiative']").value);
             
             // Can't add NPC if missing info.
             if (!name || isNaN(init)) {
@@ -226,7 +262,8 @@ loadExternalScript("public/combatMap.js");
             data = {
                 character_name : name,
                 initiative : init,
-                size: size,
+                size : document.querySelector("[name='npcSize']").value,
+                speed : document.querySelector("[name='npcSpeed']").value,
                 id : (new Date()).valueOf().toString()
             };
             
@@ -244,6 +281,7 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.onListEvent("toggleMob", function(data) {
             pageContext.removeMob(data);
             if (data.mob_type === "npc") {
+                
                 initiativeContext.removeMob(data);
             } else {
                 onPositionClicked(data);
@@ -256,24 +294,13 @@ loadExternalScript("public/combatMap.js");
             pageContext.onMapEvent("td > button", "click",  addTerrain);
         });
 
-       onEvent("button[name='generateMap']", "click", generateMap);        
+        onEvent("button[name='generateMap']", "click", generateMap);        
         
-        onEvent("button[name='clear']", "click", clear)
+        onEvent("button[name='clear']", "click", clear);
+        
+        onEvent("button[name='start']", "click", start);
 
-        onEvent("button[name='reset']", "click", function() {
-            if (window.sessionId) {
-                sendHttpRequest("session/" + window.sessionId, "DELETE")
-                .then(function(res) {
-                    replaceBody("home", document.documentElement);
-                })
-            .   catch(function(res) {
-                    console.error(res.status, res.responseText);
-                });
-            } else {
-                replaceBody("home", document.documentElement);    
-            }
-            delete window.sessionId;
-        });        
+        onEvent("button[name='reset']", "click", reset);        
     };    
     
     document.body.setAttribute("data-state", "setup");

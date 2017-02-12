@@ -94,6 +94,9 @@ CREATE TABLE PlayerCharacter (
     PlayerId integer NOT NULL,
     RaceId integer NOT NULL,
     CharacterName text NULL,
+    Speed integer NOT NULL
+        CONSTRAINT DF_PlayerCharacter_Speed
+        DEFAULT (0),
     
     CONSTRAINT PK_PlayerCharacter PRIMARY KEY (CharacterId),
     CONSTRAINT FK_PlayerCharacter_Player
@@ -114,7 +117,8 @@ CREATE FUNCTION CreatePlayer(
     PlayerName text,
     CharacterName text,
     PlayerType playerType,
-    Colour text
+    Colour text,
+    Speed integer
 )
     RETURNS integer AS 
 $BODY$
@@ -128,9 +132,12 @@ BEGIN
     -- If it's a player, add character record too.
     IF PlayerType = 'player'
     THEN
-        INSERT INTO PlayerCharacter(PlayerId, RaceId, CharacterName)
+        INSERT INTO PlayerCharacter(PlayerId, RaceId, CharacterName, Speed)
         SELECT 
-            _playerId, RaceId, CharacterName
+            _playerId,
+            RaceId,
+            CharacterName,
+            Speed
         FROM Race
         WHERE Code = 'human';
     END IF;
@@ -144,25 +151,27 @@ CREATE FUNCTION UpdatePlayer(
     SessionId integer,
     PlayerName text,
     PlayerType playerType,
-    Colour text
+    Colour text,
+    Speed integer
 )
     RETURNS integer AS
 $BODY$
 BEGIN
     UPDATE Player Pl
     SET
-        WebSessionId = coalesce($2, P.WebSessionId),
-        PlayerName = coalesce($3, P.PlayerName),
-        PlayerType = coalesce($5, P.PlayerType),
-        Colour = coalesce($6, P.Colour)
+        WebSessionId = coalesce(SessionId, P.WebSessionId),
+        PlayerName = coalesce(PlayerName, P.PlayerName),
+        PlayerType = coalesce(PlayerType, P.PlayerType),
+        Colour = coalesce(Colour, P.Colour)
     FROM Player P
-    WHERE Pl.PlayerId = $1;
+    WHERE Pl.PlayerId = PlayerId;
     
     IF PlayerType = 'player'
     THEN
         UPDATE PlayerCharacter PC
         SET
-            CharacterName = coalesce($4, P.CharacterName)
+            CharacterName = coalesce(CharacterName, P.CharacterName),
+            Speed = coalesce(Speed, P.Speed)
         FROM PlayerCharacter P
         WHERE P.PlayerId = PlayerId;
     END IF;

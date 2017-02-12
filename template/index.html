@@ -7,10 +7,11 @@
 </fieldset>
 <fieldset id="playerOptions">
     <legend>OR Set up your character</legend>
-    <label>Character's Name:</label><input type="text" name="characterName" />
-    <label>Race:</label>
+    <label>Character's Name</label> <input type="text" name="characterName" />
+    <label>Race</label>
         <!-- TODO: proper, dynamic list of races. -->
-        <label for="race-human">Human</label><input id="race-human" type="radio" name="race" value="human" />
+        <label for="race-human">Human</label><input id="race-human" type="radio" name="race" value="human" checked />
+    <label>Speed</label> <input type="number" name="speed" value="30" />
     <div class="ctrl-colourOption">
         <label>Colour</label>
         <input type="radio" id="red" value="FF0000" name="colour" checked />
@@ -97,7 +98,9 @@
         if (body.player_type === "player") {
             body.character_name = document.querySelector("input[name='characterName']").value;
             body.colour = document.querySelector("input[type='text'][name='colour']").value ||
-                document.querySelector("input[name='colour']:checked").value;            
+                document.querySelector("input[name='colour']:checked").value;    
+            body.colour = body.colour.replace("#", "");
+            body.speed = parseInt(document.querySelector("input[name='speed']").value);   
         }
 
         if (window.sessionId) {

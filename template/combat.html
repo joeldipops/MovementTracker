@@ -26,20 +26,27 @@ loadExternalScript("public/combatMap.js");
     onReceiveMessage = function(event) {
         var data, el;
         data = JSON.parse(event.data);
-        if (data["map_changed"]) {
-            pageContext.renderMap(data["map_changed"], template);    
+        if (data["map_update"]) {
+            pageContext.renderMap(data["map_update"], template);    
         }
     }; 
+    onEvent(window.socket, "message", onReceiveMessage);
     
-    wait(function() {
-        if (pageContext.renderMap) {
-            pageContext.renderMap({
-                height: TABLE_HEIGHT,
-                width: TABLE_WIDTH
-            }, template);
-            return true;
-        }
-        return false;
+    sendHttpRequest("session/" + window.sessionId + "/map", "GET")
+    .then(function(response) {
+        wait(function() { 
+            if (pageContext.renderMap) {
+                var data = JSON.parse(response.responseText || null);
+                if (data.width) {
+                    pageContext.renderMap(data, template);
+                }        
+                return true;
+            }
+            return false;
+        });
+    })
+    .catch(function() {
+        debugger;
     });
 })();
 </script>

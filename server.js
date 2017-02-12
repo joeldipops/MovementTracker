@@ -25,6 +25,8 @@ server.get("/page/dm_console", getDmConsolePage);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
+server.get(/session\/[0-9]+\/map/, downloadMap);
+server.put(/session\/[0-9]+\/map/, uploadMap);
 server.get(/session(\/[0-9]+)?/, getSession);
 server.del(/session\/[0-9]+/,deleteSession); 
 
@@ -54,6 +56,27 @@ process.on("SIGINT", function () {
 });
 
 /**
+ * Caches the entire map and then broadcasts to all.
+ */
+function uploadMap(req, res) {
+    var sessionId, message;
+    sessionId = getEntityId("session", req);
+    socketServerControl.cache(`map-${sessionId}`, req.body);
+    socketServerControl.broadcastJSON({ map_update : req.body });
+    res.writeHead(200);
+    res.end();
+};
+
+/**
+ * Downloads the latest map.
+ */
+function downloadMap(req, res) {
+    var sessionId;
+    sessionId = getEntityId("session", req);
+    return serveJSON(res, socketServerControl.cache(`map-${sessionId}`));
+}
+
+/**
  * Creates or updates a player.
  */
 function putPlayer(req, res) {
@@ -69,7 +92,8 @@ function putPlayer(req, res) {
         req.body.player_name,
         req.body.character_name,
         req.body.player_type,
-        req.body.colour
+        req.body.colour,
+        req.body.speed
     ];
 
     if(playerId) {
@@ -90,7 +114,8 @@ function putPlayer(req, res) {
             socket_id : req.body.socket_id,
             player_type : req.body.player_type,
             colour: req.body.colour,
-            size : req.body.size || "medium"
+            size : req.body.size || "medium",
+            speed : req.body.speed
         });
         if (!playerId) {
             switch(req.body.player_type) {
@@ -104,7 +129,8 @@ function putPlayer(req, res) {
                 player_id: player.player_id,
                 session_id: sessionId,
                 colour: player.colour,
-                size: player.size
+                size: player.size,
+                speed : player.speed
             };
             socketServerControl.broadcastJSON(message);
         }
@@ -165,7 +191,8 @@ function getPlayerList(req, res) {
                 character_name: result.rows[i].charactername,
                 player_type: result.rows[i].playertype,
                 colour: result.rows[i].colour,
-                size: result.rows[i].size
+                size: result.rows[i].size,
+                speed: result.rows[i].speed
             });
         }
         
@@ -300,7 +327,7 @@ function serveHtml(res, content) {
 
 function serveJSON(res, content) {
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.write(JSON.stringify(content));
+    res.write(JSON.stringify(content) || "{}");
     return res.end();
 };
 
@@ -316,7 +343,15 @@ function serveError(res, message, code) {
     return res.end();
 };
 
+/**
+ * Extracts the entity id from the url
+ * @param {string} entityName the name of the entity as it appears in the url.
+ * @param {string|object} path The url path of the request containing it.
+ */
 function getEntityId(entityName, path) {
+    if (typeof path !== "string") {
+        path = url.parse(path.url).pathname;
+    }
     var regex, result;
     regex = new RegExp("^.*\/" + entityName + "\/([0-9]+)\/?.*$")
 

@@ -134,7 +134,7 @@ ul.ctrl-colourOption {
 }
 
 
-.ctrl-colourOption > input {
+.ctrl-colourOption > input[type='radio'] {
     display: none;
 }
 
