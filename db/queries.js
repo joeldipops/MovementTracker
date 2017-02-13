@@ -40,14 +40,14 @@ SELECT UpdatePlayer($1, $2, $3, $4, $5, $6) AS PlayerId;
 DELETE FROM Player
 WHERE PlayerId = $1
     ;`,
-    
+
     getPlayers: `
 SELECT 
     P.PlayerId,
     P.PlayerName,
     P.PlayerType,
     P.Colour,
-    PC.CharacterName,    
+    PC.CharacterName,
     PC.Speed,
     R.SizeCode AS Size
 FROM Player P

@@ -33,9 +33,9 @@ loadExternalScript("public/combatMap.js");
     sendHttpRequest("session/" + window.sessionId + "/map", "GET")
     .then(function(response) {
         wait(function() {
-            var i, k;
+            var data;
             if (pageContext.renderMap) {
-                var data = JSON.parse(response.responseText || null);
+                data = JSON.parse(response.responseText || null);
                 if (data.width) {
                     updateMap(data);
                 }

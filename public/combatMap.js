@@ -2,10 +2,10 @@
     var _mapEvents, _mapEl, _mobs, _mobIndex, isIdEqual;
     
     _mapEvents = [];
-    _mapEl = document.getElementById("map");    
+    _mapEl = document.getElementById("map");
     _mobs = {};
     _mobIndex = {};
-    
+
     /**
      * Compares mobs by id..
      * @param {object} first mob to compare.
@@ -15,7 +15,7 @@
     isSameMob = function(first, second) {
         if (!first || !second) {
             return false;
-        }        
+        }
 
         return first.id.toString() === second.id.toString();
     }
@@ -34,7 +34,7 @@
         while(_mapEL.firstChild) {
             _mapEL.removeChild(_mapEL.firstChild);
         }
-        
+
         _mapEl.setAttribute("data-width", data.width);
         _mapEl.setAttribute("data-height", data.height);
 
@@ -53,23 +53,23 @@
                         newTd.setAttribute("scope", "row");
                         newTd.innerHTML = y;
                     }
-                    newTr.appendChild(newTd);                    
+                    newTr.appendChild(newTd);
                 } else {
                     // Main cells.
                     newTr.insertAdjacentHTML("beforeend", template);
                     button = newTr.lastElementChild.querySelector("button");
                     button.setAttribute("data-x", x);
                     button.setAttribute("data-y", y);
-                    
-                    key = x + "," + y;  
-                    
+
+                    key = x + "," + y;
+
                     // Set any abnormal terrain on this cell.
                     if (data.terrains && data.terrains[key]) {
                         pageContext.setTerrain(x, y, data.terrains[key].type);
                     } else {
                         button.setAttribute("data-type", "normal");
                     }
-                    
+
                     // Place any mobs on this cell.
                     if (data.mobs && data.mobs[key]) {
                         for (i = 0; i < data.mobs[key].length; i++) {
@@ -80,7 +80,7 @@
             }
         }
     };
-    
+
     /**
      * Selects the td element at the given co-ordinates.
      * @param {number} x horizontal co-ordinate.
@@ -128,7 +128,7 @@
         swimable: { text: "Swimable", colour: "#0000FF" },
         impassable: { text: "Impassable", colour: "#000000" }
     };
-    
+
     // Not authoritative sizes.
     pageContext.mobSizes = {
         tiny : { text: "Tiny", tiles: 1, rank : 1 },
@@ -138,7 +138,7 @@
         huge : { text : "Huge", tiles: 1, rank: 5},
         colossal: { text: "Colossal", tiles: 1, rank: 6 }
     };
-    
+
     /**
      * Gets mobs partially or fully in a given cell.
      * @param {number} x co-ordinate of the cell.
@@ -151,7 +151,7 @@
         }
         return null;
     };
-    
+
     /**
      * Gets mob on the map with a given id.
      * @param {number} id of the mob.
@@ -159,19 +159,19 @@
      */
     pageContext.getMobWithId = function(id) {
         var i, array;
-        
+
         if (!_mobIndex[id]) {
             return null;
         }
-        
-        array = pageContext.getMob(_mobIndex[id].x, _mobIndex[id].y);        
+
+        array = pageContext.getMob(_mobIndex[id].x, _mobIndex[id].y);
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], { id : id})) {
                 return array[i];
             }
         }
     };
-    
+
     /**
      * Sets a mob as part of a given cell.
      * @param {number} x co-ordinate of the cell.
@@ -189,7 +189,7 @@
         if (!_mobs[x][y]) {
             _mobs[x][y] = [];
         }
-         
+
         data.x = x;
         data.y = y;
         _mobs[x][y].push(data);
@@ -200,9 +200,9 @@
         el.setAttribute("title", data.character_name);
         el.style.backgroundColor = data.colour || "#EEEEEE";
         container = pageContext.getCell(x, y);
-        container.parentNode.appendChild(el);         
+        container.parentNode.appendChild(el);
     };
-    
+
     /**
      * Updates a terrain on the map.
      * @param {number} x co-ordinate of the terrain.
@@ -210,11 +210,11 @@
      * @param {string} type type-code of the terrain.
      */
     pageContext.setTerrain = function(x, y, type) {
-        var el = pageContext.getCell(x, y);    
+        var el = pageContext.getCell(x, y);
         el.setAttribute("data-type", type);
         el.style.backgroundColor = pageContext.terrainTypes[type].colour;
     };
-    
+
     /**
      * Removes a mob from the map
      */
@@ -229,22 +229,22 @@
         if (!data || !(data.x && data.y)) {
             return;
         }
-        delete _mobIndex[data.id];        
+        delete _mobIndex[data.id];
         array = pageContext.getMob(data.x, data.y);
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], data)) {
                 break;
             }
         }
-        array.splice(i, 1);                 
-        
+        array.splice(i, 1);
+
         cell = pageContext.getCell(data.x, data.y);
         mobEl = cell.parentElement.querySelector("button[data-id='" + data.id + "']");
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
         }
-    };  
-    
+    };
+
     /**
      * Converts map to a transmittable object.
      * @returns {object} The map as a json object.
@@ -258,7 +258,7 @@
             width: width,
             height: height
         };
-        
+
         // Find all the abnormal terrains.
         terrains = _mapEl.querySelectorAll("button[data-x]:not([data-type='normal'])");
         result.terrains = {};
@@ -271,7 +271,7 @@
                 y: y
             };
         }
-        
+
         //Find all the mobs.
         result.mobs = {};
         for (k in _mobIndex) {
@@ -282,10 +282,10 @@
             if (!result.mobs[key]) {
                 result.mobs[key] = [];
             }
-            
+
             result.mobs[key].push(pageContext.getMobWithId(k));
         }
-        
+
         return result;
     };
 })();

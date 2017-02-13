@@ -40,14 +40,14 @@ DELETE FROM WebSession;
     `, [], typeof done === "function" ? done : function(){});
 };
 
-socketServerControl.setUpServer(server, removePlayer, resetSession); 
+socketServerControl.setUpServer(server, removePlayer, resetSession);
 process.on("SIGINT", function () {
     console.log("Terminating...");
     try {
         console.log("Closing server...");
         server.close();
         console.log("Cleaning up data...");
-        resetSession(process.exit.bind(process, 0));            
+        resetSession(process.exit.bind(process, 0));
     } catch (error) {
         console.error("Error in shutdown...");
         console.error(JSON.stringify(error));
@@ -84,7 +84,7 @@ function putPlayer(req, res) {
 
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
-    playerId = getEntityId("player", path) || req.body.player_id || 
+    playerId = getEntityId("player", path) || req.body.player_id ||
         (req.body.socket_id && socketServerControl.cache(req.body.socket_id) && socketServerControl.cache(req.body.socket_id).player_id);
 
     dbParams = [
@@ -136,7 +136,7 @@ function putPlayer(req, res) {
         }
         res.writeHead(200);
         res.end();
-    });   
+    });
 };
 
 function getSession(req, res) {
@@ -176,7 +176,7 @@ function getPlayerList(req, res) {
     path = url.parse(req.url).pathname;
     sessionId = parseInt(getEntityId("session", path), 10);
     params = getParams(req);
-    
+
     db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.player_type || null)], function(result) {
         var i, body;
         if (!result) {
@@ -195,9 +195,9 @@ function getPlayerList(req, res) {
                 speed: result.rows[i].speed
             });
         }
-        
+
         res.writeHead(200, { "Content-Type" : "application/json" });
-        
+
         res.write(JSON.stringify(body));
         res.end();
     });
@@ -239,14 +239,14 @@ function removePlayer(data) {
 function getStaticFile(req, res) {
     var path, regex, extension;
     path = "." + url.parse(req.url).pathname;
-    
+
     fs.readFile(path, function(err, data) {
         if (err) {
             return serveError(res, path + " not found", 404);
         }
         res.writeHead(200, { "Content-Type" : estimateContentType(path) });
         res.write(data);
-        return res.end();        
+        return res.end();
     });
 }
 
@@ -281,8 +281,8 @@ function getIndex(req, res) {
             bootstrap: sessionScript || "",
             content: content,
             social: socialContent
-        });   
-       return serveHtml(res, html);         
+        });
+       return serveHtml(res, html);
     });
 };
 

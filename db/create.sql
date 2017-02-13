@@ -27,36 +27,36 @@ CREATE ROLE DungeonsAndDragonsApp
 
 CREATE DATABASE DungeonsAndDragons
     WITH OWNER DungeonsAndDragonsApp;
-      
+
 -- Has to be lowercase for some reason.
 \c dungeonsanddragons
 
 ALTER DEFAULT PRIVILEGES
     IN SCHEMA public
-    GRANT ALL ON TABLES 
+    GRANT ALL ON TABLES
     TO DungeonsAndDragonsApp;
-ALTER DEFAULT PRIVILEGES 
+ALTER DEFAULT PRIVILEGES
     IN SCHEMA public
-    GRANT ALL ON SEQUENCES 
-    TO DungeonsAndDragonsApp;        
-ALTER DEFAULT PRIVILEGES 
+    GRANT ALL ON SEQUENCES
+    TO DungeonsAndDragonsApp;
+ALTER DEFAULT PRIVILEGES
     IN SCHEMA public
-    GRANT ALL ON FUNCTIONS 
-    TO DungeonsAndDragonsApp;   
-    
+    GRANT ALL ON FUNCTIONS
+    TO DungeonsAndDragonsApp;
+
 CREATE TYPE playerType
     AS ENUM ('player', 'dm', 'spectator');
 
 CREATE TYPE creatureSize
     AS ENUM ('tiny', 'small', 'medium', 'large', 'huge', 'colossal');
-    
-    
+
+
 CREATE TABLE WebSession (
     WebSessionId serial NOT NULL,
     CreatedTimeStamp timestamp WITHOUT TIME ZONE NOT NULL
         CONSTRAINT DF_WebSession_CreatedTimeStamp
         DEFAULT (now() AT TIME ZONE 'utc'),
-        
+
     CONSTRAINT PK_WebSession PRIMARY KEY (WebSessionId)
 );
 
@@ -78,10 +78,10 @@ CREATE TABLE Player (
     PlayerType playerType NOT NULL
         CONSTRAINT DF_Player_IsDm
         DEFAULT ('player'),
-    Colour text NULL        
+    Colour text NULL
         CONSTRAINT CK_Player_Colour
         CHECK ((PlayerType = 'player' AND Colour IS NOT NULL) OR PlayerType <> 'player'),
-        
+
     CONSTRAINT PK_Player PRIMARY KEY (PlayerId),
     CONSTRAINT FK_Player_WebSession 
         FOREIGN KEY (WebSessionId) 
@@ -97,7 +97,7 @@ CREATE TABLE PlayerCharacter (
     Speed integer NOT NULL
         CONSTRAINT DF_PlayerCharacter_Speed
         DEFAULT (0),
-    
+
     CONSTRAINT PK_PlayerCharacter PRIMARY KEY (CharacterId),
     CONSTRAINT FK_PlayerCharacter_Player
         FOREIGN KEY (PlayerId)
@@ -133,7 +133,7 @@ BEGIN
     IF PlayerType = 'player'
     THEN
         INSERT INTO PlayerCharacter(PlayerId, RaceId, CharacterName, Speed)
-        SELECT 
+        SELECT
             _playerId,
             RaceId,
             CharacterName,
@@ -141,10 +141,10 @@ BEGIN
         FROM Race
         WHERE Code = 'human';
     END IF;
-    
+
     RETURN _playerId;
 END;
-$BODY$ LANGUAGE plpgsql;  
+$BODY$ LANGUAGE plpgsql;
 
 CREATE FUNCTION UpdatePlayer(
     PlayerId integer,
@@ -165,7 +165,7 @@ BEGIN
         Colour = coalesce(Colour, P.Colour)
     FROM Player P
     WHERE Pl.PlayerId = PlayerId;
-    
+
     IF PlayerType = 'player'
     THEN
         UPDATE PlayerCharacter PC
@@ -176,6 +176,6 @@ BEGIN
         WHERE P.PlayerId = PlayerId;
     END IF;
     
-    RETURN PlayerId;      
+    RETURN PlayerId;
 END;
-$BODY$ LANGUAGE plpgsql;  
+$BODY$ LANGUAGE plpgsql;

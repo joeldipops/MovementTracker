@@ -22,7 +22,7 @@ module.exports = {
                     if (params[i] == null) {//yes, we want == here incase of null or void 0 etc.
                         value = "NULL";
                     }
-                    
+
                     regex = new RegExp("\\$" + (i+1), "g");
                     sql = sql.replace(regex, value);
                 }
@@ -38,5 +38,5 @@ module.exports = {
                 done(result);
             });
         });
-    } 
+    }
 };

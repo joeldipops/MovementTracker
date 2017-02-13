@@ -26,11 +26,11 @@ var a = function() {
         }
         for (i = 0; i < target.length; i++) {
             target[i].addEventListener(event, handler);
-            _pageEvents.push(target[i].removeEventListener.bind(target[i], event, handler));        
+            _pageEvents.push(target[i].removeEventListener.bind(target[i], event, handler));
         }
 
     };
-    
+
     /**
      * Cleans up a page when it is no longer needed.
      */
@@ -49,7 +49,7 @@ var a = function() {
        }
        pageContext = {};
     };
-    
+
     /**
      * Repeatedly calls a function until it succeeds.
      * Used when waiting for a resource to exist.
@@ -60,7 +60,7 @@ var a = function() {
             _pendingTimeouts.push(setTimeout(wait.bind({}, callback), 50));
         }
     };
-    
+
     /**
      * Makes a clone of an object.
      * @param {object} object
@@ -70,16 +70,16 @@ var a = function() {
     clone = function(object, full) {
         var k, result;
         result = {};
-        
+
         for (k in object) {
             if(!full && !object.hasOwnProperty(k)) {
-                continue;    
+                continue;
             }
             result[k] = object[k];
-        }   
+        }
         return result;
     };
-    
+
     /**
      * Calls parse int with the default r value of 10
      * @param {string} value can be parsed into a number.
@@ -89,7 +89,7 @@ var a = function() {
     var parseInt = function(value, r) {
         return window.parseInt(value, r !== void 0 ? r : 10);
     };
-    
+
     /**
      * Keeps track of pending promises so they can be rejected when no longer needed.
      * @param {function} callback The promise callback
@@ -118,7 +118,7 @@ var a = function() {
         });
         return resultPromise;
     };
-}(); 
+}();
 
 /**
  * Sends a http request and passes the results to a callback via promises.
@@ -126,13 +126,13 @@ var a = function() {
  * @param {string} method The HTTP method.
  * @param {object} data to send with the request (only json supported atm}
  * @param {object} options to override default behaviour.
- * @returns {Promise} promise that resolves or rejects when request returns.  
+ * @returns {Promise} promise that resolves or rejects when request returns.
  */
 var sendHttpRequest = function(url, method, data, options) {
     var request, type, promise,
         onPromise, onHttpResponse;
     options = options || {};
-    
+
     onPromise = function(resolve, reject) {
         request = new XMLHttpRequest();
         request.addEventListener("load", function() {
@@ -157,12 +157,12 @@ var sendHttpRequest = function(url, method, data, options) {
             request.send();
         }
     };
-    
+
     // Don't cancel promise on close.
     if (options.isPersistent) {
         return new Promise(onPromise);
     } else {
-        return newPromise(onPromise);   
+        return newPromise(onPromise);
     }
 };
 
@@ -206,7 +206,7 @@ var replaceBody = function(url, container, data, options) {
        } else {
            console.trace();
        }
-   });  
+   });
 };
 
 /**
@@ -240,10 +240,10 @@ var socketControl = function(socketAddress) {
     socket = new WebSocket(socketAddress, "echo-protocol");
     
     onSendMessage = function() {
-        var text = document.querySelector("[name='message']").value    
+        var text = document.querySelector("[name='message']").value
         socket.send(text);
     };
-    
+
     /**
      * Handles messages received through the web socket.
      */
@@ -257,7 +257,7 @@ var socketControl = function(socketAddress) {
             window.socketId = data.socket_id;
         }
     };
-    
+
     socket.addEventListener("message", onReceiveMessage);
-    window.socket = socket;    
+    window.socket = socket;
 }(window.location.origin.replace(/https?/, "ws").replace(/\/$/, ""));

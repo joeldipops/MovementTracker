@@ -44,7 +44,7 @@ _onRequest = function(req) {
     shared.sendJSON(id, { socket_id : id });
 };
 
-    
+
 shared = {
     /**
      * Sets up a socket server to listen for connection requests.
@@ -60,6 +60,7 @@ shared = {
         _onNoConnections = onNoConnections;
         return _server;
     },
+
     /**
      * Sends a message string to all clients.
      * @param {string} message The message.
@@ -74,10 +75,11 @@ shared = {
             // ignore excluded connections.
             if (excluding && excluding.indexOf(i) >= 0) {
                 continue;
-            }            
+            }
             _connections[i].sendUTF(message);
         }
     },
+
     /**
      * Sends an object to all clients as JSON.
      * @param {object} json The object.
@@ -86,7 +88,7 @@ shared = {
     broadcastJSON : function(json, excluding) {
         return this.broadcastMessage(JSON.stringify(json), excluding);
     },
-    
+
     /**
      * Sends an object to a given list of clients.
      * @param {number|array of number} ids Client ids to send to. 
@@ -94,14 +96,14 @@ shared = {
      */
     sendJSON: function(ids, json) {
         var i;
-        if (!Array.isArray(ids)) {      
+        if (!Array.isArray(ids)) {
             ids = [ids];
         }
         for (i = 0; i < ids.length; i++) {
             _connections[ids[i]].sendUTF(JSON.stringify(json));
         }
     },
-    
+
     /**
      * Caches data against a connection.
      * @param {number} id of the connection.

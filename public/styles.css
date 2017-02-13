@@ -88,9 +88,9 @@ td.ctrl-combatCell {
         background-color: rgba(0,0,0,0.2);
     }
     td.ctrl-combatCell > button:first-child:hover {
-        background-color: rgba(0,0,0,0.1);    
+        background-color: rgba(0,0,0,0.1);
     }
-    
+
     td.ctrl-combatCell > button + button {
         position: absolute;
         width: 50%;
@@ -114,10 +114,10 @@ table.ctrl-combatMap {
         height: 25px;
         vertical-align: middle;
         text-align: center;
-        border-width: 1px 0 0 1px;                    
+        border-width: 1px 0 0 1px;
         border-color: black;
     }
-    
+
     table.ctrl-combatMap th {
         border-style: solid;
 
