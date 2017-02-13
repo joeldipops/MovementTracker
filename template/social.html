@@ -4,7 +4,7 @@
     <ol class="initiativeList"></ol>
 </section>
 <script id="template-initiativeListItem" type="text/html">
-<li data-id="" data-mobType="">
+<li class="mob" data-id="" data-mobType="" data-initiative="">
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
     <span class="usedReaction">No</span>
@@ -19,13 +19,13 @@ window.initiativeContext = {};
     var onReceiveMessage, onClose, bindInputEvents,
         addPlayer, removePlayer, addDM, removeDM,
         template, _listEl, _subscribers, _events;
-        
+
     _listEl = document.querySelector("#social ol.initiativeList");
     _subscribers = {};
     _events = [];
 
-    template = document.querySelector("#template-initiativeListItem").innerHTML;        
-    
+    template = document.querySelector("#template-initiativeListItem").innerHTML;
+
     /**
      * Cleans up bound events.
      */
@@ -38,7 +38,7 @@ window.initiativeContext = {};
         }
         _events = [];
     };
-    
+
     /**
      * Ensures click etc events will fire for each item in the list.
      * @param {HTMLElement} The list item with buttons to bind.
@@ -52,7 +52,7 @@ window.initiativeContext = {};
              _events.push(buttons[i].removeEventListener.bind(buttons[i], "click", handler));
          }
      };
-     
+
      /**
       * Calls subscribing callbacks.
       * @param {HTMLElement} li parentNode of the clicked element.
@@ -68,7 +68,7 @@ window.initiativeContext = {};
             data.mob_type = li.getAttribute("data-mobtype");
             data.colour = li.style.color;
             data.character_name = li.querySelector(".mobName").innerHTML;
-            
+
             for (i = 0; i < _subscribers[name].length; i++) {
                 _subscribers[name][i](data);
             }
@@ -83,7 +83,7 @@ window.initiativeContext = {};
         var data, el;
         data = JSON.parse(event.data);
         if (data["player_add"]) {
-            addPlayer(data["player_add"]);    
+            addPlayer(data["player_add"]);
         }
         if (data["player_remove"]) {
             removePlayer(data["player_remove"]);
@@ -97,19 +97,30 @@ window.initiativeContext = {};
         if (data["session_id"]) {
             refreshList();
         }
-        
+
     };
-    
+
+    /**
+     * Sets the name of the DM in the display.
+     * @param {object} data describing dm.
+     */
     addDM = function(data) {
         var el = document.querySelector("#social > section > div");
         el.innerHTML = "DM is " + data.player_name;
     };
-    
+
+    /**
+     * Reverts the dm display if they leave.
+     */
     removeDM = function(data) {
         var el = document.querySelector("#social > section > div");
-        el.innerHTML = "Waiting for DM";     
+        el.innerHTML = "Waiting for DM";
     };
-    
+
+    /**
+     * Removes a mob from the list.
+     * @param {object} data describes the mob.
+     */
     removePlayer = function(data) {
         var li, id;
         id = isNaN(data.player_id) ? data.id : data.player_id;
@@ -117,32 +128,64 @@ window.initiativeContext = {};
             li.parentElement.removeChild(li);
         }
     };
-    
+
+    /**
+     * Removes all mobs from the list.
+     */
     removeAll = function() {
         while (_listEl.firstChild) {
             _listEl.removeChild(_listEl.firstChild);
         }
     };
-    
+
+    /**
+     * Adds a mob to the list, by correct sort order.
+     */
     addPlayer = function(data) {
-        var list, li;
+        var list, li, fragment, 
+            inserted, i, extant, init;
         if (!isNaN(data.player_id)) {
             data.id = data.player_id
         }
+
         // Don't add same player more than once.
-        if (li = _listEl.querySelector("li[data-id='" + data.id + "']")) {
+        if (_listEl.querySelector("li[data-id='" + data.id + "']")) {
             return;
         }
 
-        _listEl.insertAdjacentHTML("beforeend", template);
-        li = _listEl.lastElementChild;
+        // TODO Actual initiative.
+        data.initiative = Math.floor(Math.random() * 31) + 1
+
+        // probably would be faster to manipulate the template than the element...
+        fragment = document.createDocumentFragment();
+        fragment.appendChild(document.createElement("span"));
+        fragment.firstElementChild.insertAdjacentHTML("beforeend", template);
+        li = fragment.firstElementChild.firstElementChild;
+
         li.style.color = "#" + data.colour;
         li.setAttribute("data-id", data.id);
         li.setAttribute("data-mobType", isNaN(data.player_id) ? "npc" : "pc");
         li.setAttribute("data-size", data.size);
+        li.setAttribute("data-initiative", data.initiative || init);
         li.querySelector(".mobName").innerHTML = data.character_name;
-        li.querySelector(".initiativeScore").innerHTML = data.initiative;
-        
+        li.querySelector(".initiativeScore").innerHTML = data.initiative || init;
+
+        extant = _listEl.querySelectorAll("li.mob");
+        for (i = 0; i < extant.length; i++) {
+            init = parseInt(extant[i].getAttribute("data-initiative"));
+            if (data.initiative > init) {
+                _listEl.insertBefore(li, extant[i]);
+                inserted = true;
+                break;
+            } else if (data.initiative === init) {
+                _listEl.insertBefore(li, extant[i+1]);
+                inserted = true;
+                break;
+            }
+        }
+        if (!inserted) {
+            _listEl.appendChild(li);
+        }
         bindInputEvents(li);
     };
 
@@ -157,7 +200,7 @@ window.initiativeContext = {};
             if (!result || !result.players) {
                 throw "No players";
             }
-        
+
             players = result.players;
             for (i = 0; i < players.length; i++) {
                 switch (players[i].player_type) {
@@ -174,7 +217,7 @@ window.initiativeContext = {};
     if(window.sessionId) {
         refreshList();
     }
-    
+
     window.socket.addEventListener("message", onReceiveMessage);
     window.initiativeContext.addMob = addPlayer;
     window.initiativeContext.removeMob = removePlayer;
@@ -188,10 +231,10 @@ window.initiativeContext = {};
         if (!_subscribers[event]) {
             _subscribers[event] = [];
         }
-        
+
         _subscribers[event].push(handler);
     };
-    
+
     /**
      * Removes a handler from the list of subscribers.
      * @param {string} event to unsubsribe from.
@@ -202,9 +245,49 @@ window.initiativeContext = {};
         if (!_subscribers[event]) {
             return;
         }
-        
+
         if((i = _subscribers[event].indexOf(handler)) >= 0) {
             _subscribers[event].splice(i, 1);
+        }
+    };
+
+    /**
+     * Reorders the list based on initiative.
+     */
+    window.initiativeContext.orderList = function() {
+        var listItems, temp, i, ordered, comparator;
+        listItems = _listEl.querySelectorAll("li.mob");
+        // Convert node list in to array.
+        temp = [];
+        for (i = 0; i < listItems.length; i++) {
+            temp.push(listItems[i]);
+        }
+        listItems = temp;
+
+        ordered = [];
+        while(listItems.length > 0) {
+            if (!ordered.length) {
+                ordered.push(listItems[0]);
+            } else {
+                comparator = parseInt(listItems[0].getAttribute("data-initiative"));
+                i = 0;
+                while(
+                    i < ordered.length
+                    && comparator <= parseInt(ordered[i].getAttribute("data-initiative"))
+                ) {
+                    // <= preferences earlier entries.
+                    i++;
+                }
+                ordered.splice(i, 0, listItems[0]);
+            }
+            listItems.shift();
+        }
+
+        while(_listEl.firstElementChild) {
+            _listEl.removeChild(_listEl.firstElementChild);
+        }
+        for(i = 0; i < ordered.length; i++) {
+            _listEl.appendChild(ordered[i]);
         }
     };
 })();

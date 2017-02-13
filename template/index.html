@@ -33,7 +33,7 @@
         <label for="magenta">&nbsp;</label>
 
         <input type="radio" id="yellow" value="FFFF00" name="colour" />
-        <label for="yellow">&nbsp;</label>                                        
+        <label for="yellow">&nbsp;</label>
         <input type="text" name="colour" />
     </div>
     <button name="start" data-player_type="player" disabled>Start</button>
@@ -45,9 +45,9 @@
 (function indexScript() {
     var onClickStart, onMessageReceived, onChangeInput,
         hideDmButton, buttons, inputs, i;
-        
-    document.body.setAttribute("data-state", "lobby");        
-        
+
+    document.body.setAttribute("data-state", "lobby");
+
     hideDmButton = function() {
         el = document.querySelector("#dmOptions > button[name='start']");
         el.classList.add("hidden");
@@ -64,7 +64,7 @@
             hideDmButton();
         }
     });
-    
+
     /**
      * Enables start buttons as criteria are met
      */
@@ -75,22 +75,22 @@
         if (document.querySelector("input[name='playerName']").value) {
              dmButton.removeAttribute("disabled");
              dmButton.disabled = false;
-             
+
              playerButton.removeAttribute("disabled");
              playerButton.disabled = !(document.querySelector("input[name='characterName']").value);
         } else {
             dmButton.disabled = true;
             playerButton.disabled = true;
-        
         }
     };
-    
+
     /**
      * Calls server to set up a session and a player.
      */
     onClickStart = function(event) {
         var body, result;
-        body = { 
+        debugger;
+        body = {
             player_name : document.querySelector("input[name='playerName']").value || "Captain Mystery",
             player_type : event.currentTarget.getAttribute("data-player_type")
         };
@@ -98,9 +98,9 @@
         if (body.player_type === "player") {
             body.character_name = document.querySelector("input[name='characterName']").value;
             body.colour = document.querySelector("input[type='text'][name='colour']").value ||
-                document.querySelector("input[name='colour']:checked").value;    
+                document.querySelector("input[name='colour']:checked").value;
             body.colour = body.colour.replace("#", "");
-            body.speed = parseInt(document.querySelector("input[name='speed']").value);   
+            body.speed = parseInt(document.querySelector("input[name='speed']").value);
         }
 
         if (window.sessionId) {
@@ -109,12 +109,13 @@
             result = sendHttpRequest("session", "POST")
             .then(function(result) {
                 var data = JSON.parse(result.responseText || null);
-                return sendHttpRequest("session/" + data.session_id + "/player", "PUT", body);        
-            })
+                return sendHttpRequest("session/" + data.session_id + "/player", "PUT", body);
+            });
         }
 
         result.then(function() {
             if (body.player_type === "dm") {
+                document.body.setAttribute("data-is_dm", "true");
                 return replaceBody("dm_console");
             } else {
                 return replaceBody("play");
@@ -123,7 +124,7 @@
         .catch(function() {
             delete window.sessionId;
             console.error();
-        });        
+        });
     };
 
     /**
@@ -136,7 +137,7 @@
             hideDmButton();
         }
     };
-    
+
     inputs = document.querySelectorAll("input");
     for (i = 0; i < inputs.length; i++) {
         onEvent(inputs[i], "change", onChangeInput);
@@ -145,7 +146,7 @@
     buttons = document.querySelectorAll("button[name='start']");
     for (i = 0; i < buttons.length; i++) {
         onEvent(buttons[i], "click", onClickStart);
-    }    
+    }
     onEvent(window.socket, "message", onMessageReceived);
 })();
 </script>

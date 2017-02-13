@@ -13,33 +13,32 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function combatScript() {
-    var onMessageReceived, template,
-        TABLE_WIDTH = 10,
-        TABLE_HEIGHT = 10
-    ;
-    
+    var onMessageReceived, updateMap, template;
+
     template = document.querySelector("#template-combatCell").innerHTML;
 
     /**
      * Handles messages received through the web socket.
      */
     onReceiveMessage = function(event) {
-        var data, el;
+        var data;
         data = JSON.parse(event.data);
         if (data["map_update"]) {
-            pageContext.renderMap(data["map_update"], template);    
+            updateMap(data["map_update"]);
         }
-    }; 
+    };
     onEvent(window.socket, "message", onReceiveMessage);
-    
+
+    // Get the current state of the map.
     sendHttpRequest("session/" + window.sessionId + "/map", "GET")
     .then(function(response) {
-        wait(function() { 
+        wait(function() {
+            var i, k;
             if (pageContext.renderMap) {
                 var data = JSON.parse(response.responseText || null);
                 if (data.width) {
-                    pageContext.renderMap(data, template);
-                }        
+                    updateMap(data);
+                }
                 return true;
             }
             return false;
@@ -48,5 +47,21 @@ loadExternalScript("public/combatMap.js");
     .catch(function() {
         debugger;
     });
+
+    /**
+     * Renders the map then adds all combatants to the initiative list.
+     * @param {object} data data from a GET session/map endpoint.
+     */
+    updateMap = function(data) {
+        var k, i;
+        pageContext.renderMap(data, template);
+        for (k in data.mobs) {
+            for (i = 0; i < data.mobs[k].length; i++) {
+                initiativeContext.addMob(data.mobs[k][i]);
+            }
+        }
+    }
+
+    document.body.setAttribute("data-state", "combat");
 })();
 </script>

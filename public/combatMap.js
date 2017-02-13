@@ -203,6 +203,12 @@
         container.parentNode.appendChild(el);         
     };
     
+    /**
+     * Updates a terrain on the map.
+     * @param {number} x co-ordinate of the terrain.
+     * @param {number} y co-ordinate of the terrain.
+     * @param {string} type type-code of the terrain.
+     */
     pageContext.setTerrain = function(x, y, type) {
         var el = pageContext.getCell(x, y);    
         el.setAttribute("data-type", type);

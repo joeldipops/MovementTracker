@@ -4,7 +4,7 @@
     <legend>Set Map</legend>
     <label for="mapWidth">Width</label>
     <input id="mapWidth" type="number" name="mapWidth" value="12" />
-    <label for="mapHeight">Height<label>
+    <label for="mapHeight">Height</label>
     <input id="mapHeight" type="number" name="mapHeight" value="12" />
     <button name="generateMap">Resize</button>
 </fieldset>
@@ -24,7 +24,7 @@
             <div>
                 <label for="npcSize">Speed</label>
                 <select id="npcSize" name="npcSpeed"></select>
-            </div>            
+            </div>
             <div>
                 <label for="npcSize">Size</label>
                 <select id="npcSize" name="npcSize"></select>
@@ -65,7 +65,7 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function setupScript() {
-    var i, 
+    var i,
         clear, start, reset, renderMenu, addTerrain, addMob, moveMob, removeMob, generateMap,
         onPositionClicked,
         controlsTemplate, mapCellTemplate;
@@ -83,7 +83,10 @@ loadExternalScript("public/combatMap.js");
             map.removeChild(map.firstChild);
         }
     };
-    
+
+    /**
+     * Uploads and broadcasts map, then takes you to the main screen.
+     */
     start = function() {
         var requestBody;
         requestBody = pageContext.mapToJSON();
@@ -98,9 +101,8 @@ loadExternalScript("public/combatMap.js");
                 console.error(JSON.stringify(res));
             }
         });
-        
     };
-    
+
     /**
      * Deletes the session and goes back to the lobby page.
      */
@@ -114,10 +116,11 @@ loadExternalScript("public/combatMap.js");
                 console.error(res.status, res.responseText);
             });
         } else {
-            replaceBody("home", document.documentElement);    
+            replaceBody("home", document.documentElement);
         }
+        document.body.removeAttribute("data-is_dm");
         delete window.sessionId;
-    };    
+    };
 
     /** 
      * Moves mob with id from one location to another
@@ -130,29 +133,29 @@ loadExternalScript("public/combatMap.js");
         }
         addMob(clone(data), event)
     };
-    
+
     /**
      * Adds a new MOB to the map.
      * @param {object} data describing the mob.
      * @param {DOMEvent} event The click event describing where to add the terrain.
      */
     addMob = function(data, event) {
-        var x, y, size, extant, 
+        var x, y, size, extant,
             i, j, el, container, orig;
-            
+
         orig = data;
         data = clone(data);
         // only use this ID the first time.
-        delete orig.id 
+        delete orig.id
 
         if (!data.id) {
             data.id = (new Date()).valueOf().toString();
-            initiativeContext.addMob(data);             
+            initiativeContext.addMob(data);
         }
-        
+
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
-        
+
         size = pageContext.mobSizes[data.size];
         extant = pageContext.getMob(x, y);
 
@@ -164,9 +167,9 @@ loadExternalScript("public/combatMap.js");
                 return
             }
         }
-        
+
         maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
-        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));        
+        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));
 
         for (i = x; i < x + size.tiles && i <= maxX; i++) {
             for (j = y; j < y + size.tiles && j <= maxY; j++) {
@@ -184,13 +187,13 @@ loadExternalScript("public/combatMap.js");
     addTerrain = function(event) {
         var x, y, X, Y, width, height, type,
             el, maxX, maxY;
-            
-        x = parseInt(event.currentTarget.getAttribute("data-x"));    
+
+        x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
         width = parseInt(document.querySelector("[name='terrainWidth']").value);
         height = parseInt(document.querySelector("[name='terrainLength']").value);
         type = document.querySelector("[name='terrainType']:checked").value;
-        
+
         // Temporary until I figure out what to do vis-a-vis code reuse.
         maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
         maxY = parseInt(document.getElementById("map").getAttribute("data-height"));
@@ -201,7 +204,7 @@ loadExternalScript("public/combatMap.js");
             }
         }
     };
-    
+
     /**
      * Generates a grid based on the user's request.
      */
@@ -215,19 +218,19 @@ loadExternalScript("public/combatMap.js");
             height: height
         }, mapCellTemplate);
     };
-    
+
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
         pageContext.onMapEvent("td > button", "click", moveMob.bind({}, data));
     };
-    
+
     /**
      * Renders controls in the menu container.
      */
     renderMenu = function() {
         var menu, el, i, option;
         menu = document.getElementById("controls");
-        menu.insertAdjacentHTML("beforeend", controlsTemplate);   
+        menu.insertAdjacentHTML("beforeend", controlsTemplate);
 
         // NPC creature sizes.
         el = menu.querySelector("#mobOptions [name='npcSize']");
@@ -242,7 +245,7 @@ loadExternalScript("public/combatMap.js");
         el = menu.querySelector("#terrainOptions > ul[name='terrainTypes']");
         // Terrain type radio buttons.
         for (i in pageContext.terrainTypes) {
-            option = document.getElementById("template-terrainType").innerHTML;             
+            option = document.getElementById("template-terrainType").innerHTML;
             option = option.replace(/{type}/g, i)
                 .replace(/{text}/g, pageContext.terrainTypes[i].text);
             el.insertAdjacentHTML("beforeend", option);
@@ -266,22 +269,21 @@ loadExternalScript("public/combatMap.js");
                 speed : document.querySelector("[name='npcSpeed']").value,
                 id : (new Date()).valueOf().toString()
             };
-            
-            initiativeContext.addMob(data);            
+
+            initiativeContext.addMob(data);
 
             pageContext.removeMapEvents();
             // the data that we bind the the map event 
             pageContext.onMapEvent("td > button", "click", addMob.bind({}, data));
         });
-        
+
         // When position/location button is clicked for a mob, we can select a cell.
         initiativeContext.onListEvent("position", onPositionClicked);
-        
+
         // When in set up mode, deleting an NPC gets rid of it completely.
         initiativeContext.onListEvent("toggleMob", function(data) {
             pageContext.removeMob(data);
             if (data.mob_type === "npc") {
-                
                 initiativeContext.removeMob(data);
             } else {
                 onPositionClicked(data);
@@ -290,23 +292,23 @@ loadExternalScript("public/combatMap.js");
 
         // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {
-            pageContext.removeMapEvents();            
-            pageContext.onMapEvent("td > button", "click",  addTerrain);
+            pageContext.removeMapEvents();
+            pageContext.onMapEvent("td > button", "click", addTerrain);
         });
 
-        onEvent("button[name='generateMap']", "click", generateMap);        
-        
+        onEvent("button[name='generateMap']", "click", generateMap);
+
         onEvent("button[name='clear']", "click", clear);
-        
+
         onEvent("button[name='start']", "click", start);
 
-        onEvent("button[name='reset']", "click", reset);        
-    };    
-    
+        onEvent("button[name='reset']", "click", reset);
+    };
+
     document.body.setAttribute("data-state", "setup");
     controlsTemplate = document.getElementById("template-controls").innerHTML;
     mapCellTemplate = document.getElementById("template-combatCell").innerHTML;
-    
+
     wait(function() {
         if (pageContext.terrainTypes) {
             renderMenu();
@@ -315,6 +317,6 @@ loadExternalScript("public/combatMap.js");
         } else {
             return false;
         }
-    });    
+    });
 })();
 </script>
