@@ -120,6 +120,42 @@ var a = function() {
     };
 }();
 
+
+/**
+ * Resolves the promise when all the the async work is resolved.
+ * @param {Array of Promise} promises
+ * @returns {Promise} callback argument is an indexed list of the results that matches the order passed in.
+ */
+var runAsync = function(promises) {
+    return newPromise(function(resolve, reject) {
+        var i, results, resolved;
+        resolved = 0;
+        results = {};
+
+        // If no promises, resolve immediately.
+        if (!promises.length) {
+            setTimeout(resolve, 0);
+            return;
+        }
+
+        for (i = 0; i < promises.length; i++) {
+            // When all promises have resolved, resolve the whole thing.
+            promises[i].then(function(index, result) {
+                resolved++;
+                results[index] = result;
+                if (resolved == promises.length) {
+                    resolve(results);
+                }
+            }.bind({},i))
+            // If any fail, fail the whole thing.
+                .catch(function(index, result) {
+                results[index] = result;
+                reject(results);
+            }.bind({},i));
+        }
+    });
+};
+
 /**
  * Sends a http request and passes the results to a callback via promises.
  * @param {string} url The target of the request.

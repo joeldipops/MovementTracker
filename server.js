@@ -21,8 +21,11 @@ server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
 server.get("/page/play", getPlayPage);
+server.get("/page/ready", getReadyPage);
 server.get("/page/dm_console", getDmConsolePage);
+server.put(/session\/[0-9]+\/player(\/[0-9]+)\/ready/, readyPlayer);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
+
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
 server.get(/session\/[0-9]+\/map/, downloadMap);
@@ -134,9 +137,23 @@ function putPlayer(req, res) {
             };
             socketServerControl.broadcastJSON(message);
         }
-        res.writeHead(200);
-        res.end();
+        return serveJSON(res, player);
     });
+};
+
+/**
+ * Sets and broadcasts the player's current initiative.
+ */
+function readyPlayer(req, res) {
+    var playerId = getEntityId("player", req);
+    socketServerControl.broadcastJSON({
+        "player_update" : {
+            player_id : playerId,
+            initiative : req.body.initiative
+        }
+    });
+    res.writeHead(200);
+    res.end();
 };
 
 function getSession(req, res) {
@@ -174,7 +191,7 @@ function deleteSession(req, res) {
 function getPlayerList(req, res) {
     var path, sessionId, params;
     path = url.parse(req.url).pathname;
-    sessionId = parseInt(getEntityId("session", path), 10);
+    sessionId = getEntityId("session", path);
     params = getParams(req);
 
     db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.player_type || null)], function(result) {
@@ -252,6 +269,11 @@ function getStaticFile(req, res) {
 
 function getPlayPage(req, res) {
     var content = fs.readFileSync("template/combat.html");
+    return serveHtml(res, content);
+};
+
+function getReadyPage(req, res) {
+    var content = fs.readFileSync("template/ready.html");
     return serveHtml(res, content);
 };
 
@@ -346,7 +368,7 @@ function serveError(res, message, code) {
 /**
  * Extracts the entity id from the url
  * @param {string} entityName the name of the entity as it appears in the url.
- * @param {string|object} path The url path of the request containing it.
+ * @param {string|object} path The url path or the request containing it.
  */
 function getEntityId(entityName, path) {
     if (typeof path !== "string") {

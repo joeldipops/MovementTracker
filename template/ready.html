@@ -1,0 +1,32 @@
+<aside class="ctrl-modal" id="initiativeModal">
+    <div>&nbsp;</div>
+    <section class="ctrl-modal">
+        <label for="initiative">Enter initiative to begin.</label>
+        <input type="number" id="initiative" name="initiative" />
+        <button name="ready">Ready</button>
+    </section>
+</aside>
+<script type="application/javascript">
+(function readyScript() {
+    var onMessageReceived, onReady, updateMap, template;
+
+    /**
+     * Handles transition to combat once initiative is entered.
+     */
+    onReady = function(event) {
+        var init, modal;
+        init = parseInt(document.querySelector("[name='initiative']").value);
+        if (isNaN(init)) {
+            // TODO show validation.
+            return;
+        }
+
+        runAsync([
+            // Set initiative.
+            sendHttpRequest("session/" + window.sessionId + "/player/" + window.playerId + "/ready", "PUT", { initiative : init }),
+            replaceBody("play")
+        ]);
+    };
+    onEvent("[name='ready']", "click", onReady);
+    document.body.setAttribute("data-state", "combat");
+})();

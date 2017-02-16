@@ -112,12 +112,14 @@
             });
         }
 
-        result.then(function() {
+        result.then(function(result) {
+            var result = JSON.parse(result.responseText);
+            window.playerId = result.player_id;
             if (body.player_type === "dm") {
                 document.body.setAttribute("data-is_dm", "true");
                 return replaceBody("dm_console");
             } else {
-                return replaceBody("play");
+                return replaceBody("ready");
             }
         })
         .catch(function() {

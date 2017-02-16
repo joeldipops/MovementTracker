@@ -91,7 +91,8 @@ td.ctrl-combatCell {
         background-color: rgba(0,0,0,0.1);
     }
 
-    td.ctrl-combatCell > button + button {
+    td.ctrl-combatCell > button + button,
+    td.ctrl-combatCell > button + div {
         position: absolute;
         width: 50%;
         height: 50%;
@@ -100,13 +101,16 @@ td.ctrl-combatCell {
         border-color: black;
         border-style: solid;
         border-width: 1px;
-    }        
+
+        font-size: small;
+        font-family: sans-serif;
+    }
 
 table.ctrl-combatMap {
     table-layout: fixed;
     border: solid 1px #000;
     border-width: 0 1px 1px 0;
-    border-spacing: 0;    
+    border-spacing: 0;
 }
     table.ctrl-combatMap th,
     table.ctrl-combatMap td {
@@ -192,3 +196,18 @@ ul.ctrl-colourOption {
             background-color: #FFFF00;
         }
 
+.ctrl-modal > div {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255,255,255,0.4);
+}
+
+.ctrl-modal > section {
+    margin: 0 auto;
+    width: 30%;
+    position: absolute;
+    top: 200px;
+}

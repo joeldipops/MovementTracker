@@ -1,4 +1,8 @@
-<table id="map" class="ctrl-combatMap" data-state=""></table>
+<article id="setup">
+    <h3></h3>
+    <table id="map" class="ctrl-combatMap" data-state="">
+    </table>
+</article>
 <script id="template-controls" type="text/html">
 <fieldset id="mapOptions">
     <legend>Set Map</legend>
@@ -57,7 +61,7 @@
 </script>
 <script id="template-combatCell" type="text/html">
 <td class="ctrl-combatCell">
-    <button>&nbsp;</button>
+    <button class="terrain">&nbsp;</button>
 </td>
 </script>
 <script type="application/javascript">
@@ -273,7 +277,7 @@ loadExternalScript("public/combatMap.js");
             initiativeContext.addMob(data);
 
             pageContext.removeMapEvents();
-            // the data that we bind the the map event 
+            // the data that we bind the the map event
             pageContext.onMapEvent("td > button", "click", addMob.bind({}, data));
         });
 
@@ -282,6 +286,7 @@ loadExternalScript("public/combatMap.js");
 
         // When in set up mode, deleting an NPC gets rid of it completely.
         initiativeContext.onListEvent("toggleMob", function(data) {
+            pageContext.removeMapEvents();
             pageContext.removeMob(data);
             if (data.mob_type === "npc") {
                 initiativeContext.removeMob(data);
@@ -289,7 +294,7 @@ loadExternalScript("public/combatMap.js");
                 onPositionClicked(data);
             }
         });
-
+        
         // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {
             pageContext.removeMapEvents();

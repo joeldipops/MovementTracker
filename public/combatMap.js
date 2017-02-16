@@ -57,7 +57,7 @@
                 } else {
                     // Main cells.
                     newTr.insertAdjacentHTML("beforeend", template);
-                    button = newTr.lastElementChild.querySelector("button");
+                    button = newTr.lastElementChild.querySelector(".terrain");
                     button.setAttribute("data-x", x);
                     button.setAttribute("data-y", y);
 
@@ -195,9 +195,11 @@
         _mobs[x][y].push(data);
         _mobIndex[data.id] = { x : x, y : y };
 
-        el = document.createElement("button");
+        el = document.createElement("div");
+        el.classList.add("mob");
         el.setAttribute("data-id", data.id);
         el.setAttribute("title", data.character_name);
+        el.innerHTML = data.character_name[0];
         el.style.backgroundColor = data.colour || "#EEEEEE";
         container = pageContext.getCell(x, y);
         container.parentNode.appendChild(el);
@@ -239,7 +241,7 @@
         array.splice(i, 1);
 
         cell = pageContext.getCell(data.x, data.y);
-        mobEl = cell.parentElement.querySelector("button[data-id='" + data.id + "']");
+        mobEl = cell.parentElement.querySelector(".mob[data-id='" + data.id + "']");
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
         }
@@ -260,7 +262,7 @@
         };
 
         // Find all the abnormal terrains.
-        terrains = _mapEl.querySelectorAll("button[data-x]:not([data-type='normal'])");
+        terrains = _mapEl.querySelectorAll(".terrain[data-x]:not([data-type='normal'])");
         result.terrains = {};
         for (i = 0; i < terrains.length; i++) {
             x = terrains[i].getAttribute("data-x");

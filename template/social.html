@@ -68,6 +68,7 @@ window.initiativeContext = {};
             data.mob_type = li.getAttribute("data-mobtype");
             data.colour = li.style.color;
             data.character_name = li.querySelector(".mobName").innerHTML;
+            data.initiative = parseInt(li.getAttribute("data-initiative"));
 
             for (i = 0; i < _subscribers[name].length; i++) {
                 _subscribers[name][i](data);
@@ -84,6 +85,9 @@ window.initiativeContext = {};
         data = JSON.parse(event.data);
         if (data["player_add"]) {
             addPlayer(data["player_add"]);
+        }
+        if (data["player_update"]) {
+            addPlayer(data["player_update"], true);
         }
         if (data["player_remove"]) {
             removePlayer(data["player_remove"]);
@@ -140,49 +144,62 @@ window.initiativeContext = {};
 
     /**
      * Adds a mob to the list, by correct sort order.
+     * @param {object} data describing the player
+     * @param {boolean} isUpdate true if updating a player already in the list.
      */
-    addPlayer = function(data) {
-        var list, li, fragment, 
+    addPlayer = function(data, isUpdate) {
+        var list, li, fragment,
             inserted, i, extant, init;
         if (!isNaN(data.player_id)) {
             data.id = data.player_id
         }
 
         // Don't add same player more than once.
-        if (_listEl.querySelector("li[data-id='" + data.id + "']")) {
+        li = _listEl.querySelector("li[data-id='" + data.id + "']");
+        if (!li) {
+            // probably would be faster to manipulate the template than the element...
+            fragment = document.createDocumentFragment();
+            fragment.appendChild(document.createElement("span"));
+            fragment.firstElementChild.insertAdjacentHTML("beforeend", template);
+            li = fragment.firstElementChild.firstElementChild;
+        } else if (!isUpdate) {
             return;
+        } else {
+            inserted = true;
         }
 
-        // TODO Actual initiative.
-        data.initiative = Math.floor(Math.random() * 31) + 1
-
-        // probably would be faster to manipulate the template than the element...
-        fragment = document.createDocumentFragment();
-        fragment.appendChild(document.createElement("span"));
-        fragment.firstElementChild.insertAdjacentHTML("beforeend", template);
-        li = fragment.firstElementChild.firstElementChild;
-
-        li.style.color = "#" + data.colour;
         li.setAttribute("data-id", data.id);
         li.setAttribute("data-mobType", isNaN(data.player_id) ? "npc" : "pc");
-        li.setAttribute("data-size", data.size);
-        li.setAttribute("data-initiative", data.initiative || init);
-        li.querySelector(".mobName").innerHTML = data.character_name;
-        li.querySelector(".initiativeScore").innerHTML = data.initiative || init;
 
-        extant = _listEl.querySelectorAll("li.mob");
-        for (i = 0; i < extant.length; i++) {
-            init = parseInt(extant[i].getAttribute("data-initiative"));
-            if (data.initiative > init) {
-                _listEl.insertBefore(li, extant[i]);
-                inserted = true;
-                break;
-            } else if (data.initiative === init) {
-                _listEl.insertBefore(li, extant[i+1]);
-                inserted = true;
-                break;
+        if (data.colour) { li.style.color = "#" + data.colour; }
+        if (data.size) { li.setAttribute("data-size", data.size); }
+        if (data.character_name) { li.querySelector(".mobName").innerHTML = data.character_name; }
+
+        if (!isNaN(data.initiative)) {
+            inserted = false;
+            li.parentNode.removeChild(li);
+            li.querySelector(".initiativeScore").innerHTML = data.initiative;
+            li.setAttribute("data-initiative", data.initiative);
+
+            extant = _listEl.querySelectorAll("li.mob");
+            for (i = 0; i < extant.length; i++) {
+                init = parseInt(extant[i].getAttribute("data-initiative"));
+                if (data.initiative > init) {
+                    _listEl.insertBefore(li, extant[i]);
+                    inserted = true;
+                    break;
+                } else if (data.initiative === init) {
+                    // Later rollers go later in the list.
+                    _listEl.insertBefore(li, extant[i+1]);
+                    inserted = true;
+                    break;
+                }
             }
+        } else {
+
         }
+
+        // If initiative not set, just append to the end.
         if (!inserted) {
             _listEl.appendChild(li);
         }

@@ -8,13 +8,12 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script id="template-combatCell" type="text/html">
 <td class="ctrl-combatCell">
-    <button>&nbsp;</button>
+    <button class="terrain">&nbsp;</button>
 </td>
 </script>
 <script type="application/javascript">
 (function combatScript() {
     var onMessageReceived, updateMap, template;
-
     template = document.querySelector("#template-combatCell").innerHTML;
 
     /**
@@ -57,11 +56,10 @@ loadExternalScript("public/combatMap.js");
         pageContext.renderMap(data, template);
         for (k in data.mobs) {
             for (i = 0; i < data.mobs[k].length; i++) {
-                initiativeContext.addMob(data.mobs[k][i]);
+                initiativeContext.addMob(data.mobs[k][i], true);
             }
         }
     }
-
     document.body.setAttribute("data-state", "combat");
 })();
 </script>
