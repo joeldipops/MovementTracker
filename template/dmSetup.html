@@ -122,7 +122,7 @@ loadExternalScript("public/combatMap.js");
         } else {
             replaceBody("home", document.documentElement);
         }
-        document.body.removeAttribute("data-is_dm");
+        document.body.removeAttribute("data-isDm");
         delete window.sessionId;
     };
 
@@ -154,6 +154,7 @@ loadExternalScript("public/combatMap.js");
 
         if (!data.id) {
             data.id = (new Date()).valueOf().toString();
+            delete data.order;
             initiativeContext.addMob(data);
         }
 

@@ -11,10 +11,54 @@ loadExternalScript("public/combatMap.js");
     <button class="terrain">&nbsp;</button>
 </td>
 </script>
+<script id="template-controls" type="text/html">
+    <button name="done">Done</button>
+</script>
 <script type="application/javascript">
 (function combatScript() {
-    var onMessageReceived, updateMap, template;
+    var onMessageReceived, updateMap, triggerNextTurn, renderMenu,
+        template;
     template = document.querySelector("#template-combatCell").innerHTML;
+
+    /**
+     * Renders the map then adds all combatants to the initiative list.
+     * @param {object} data data from a GET session/map endpoint.
+     * @param {string} turnMobId id of the mob whose turn it is if any.
+     */
+    updateMap = function(data, turnMobId) {
+        var k, i;
+        pageContext.renderMap(data, template);
+        window.initiativeContext.clearNpcs();
+        for (k in data.mobs) {
+            for (i = 0; i < data.mobs[k].length; i++) {
+                initiativeContext.addMob(data.mobs[k][i], true, data.mobs[k][i].id === turnMobId);
+            }
+        }
+    };
+
+    /**
+     * Sets the controls for this stage of the app.
+     */
+    renderMenu = function() {
+        var template, menu;
+        template = document.getElementById("template-controls").innerHTML;
+        menu = document.getElementById("controls");
+
+        while(menu.firstElementChild) {
+            menu.removeChild(menu.firstElementChild);
+        }
+        menu.insertAdjacentHTML("beforeend", template);
+
+        onEvent("[name='done']", "click", triggerNextTurn);
+    };
+
+    /**
+     * Determines who has the next turn and broadcasts to everyone.
+     */
+    triggerNextTurn = function() {
+        var id = initiativeContext.getNext();
+        sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
+    };
 
     /**
      * Handles messages received through the web socket.
@@ -28,16 +72,43 @@ loadExternalScript("public/combatMap.js");
     };
     onEvent(window.socket, "message", onReceiveMessage);
 
-    // Get the current state of the map.
-    sendHttpRequest("session/" + window.sessionId + "/map", "GET")
+    window.initiativeContext.onListEvent("turn_start", function(data) {
+        if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
+            // DM's turn for NPCs
+            document.body.setAttribute("data-isMyTurn", "isMyTurn");
+        } else if (data.id === window.playerId) {
+            // Player's turn.
+            document.body.setAttribute("data-isMyTurn", "isMyTurn");
+        } else {
+            // Switch off for everyone else.
+            document.body.removeAttribute("data-isMyTurn");
+        }
+    });
+
+    runAsync([
+        // Get the current state of the map.
+        sendHttpRequest("session/" + window.sessionId + "/map", "GET"),
+        // Get the current turn.
+        sendHttpRequest("session/" + window.sessionId + "/turn", "GET")
+    ])
     .then(function(response) {
         wait(function() {
-            var data;
+            var data, turnId;
             if (pageContext.renderMap) {
-                data = JSON.parse(response.responseText || null);
-                if (data.width) {
-                    updateMap(data);
+                data = {
+                    map :JSON.parse(response[0].responseText || null),
+                    turn : JSON.parse(response[1].responseText || null)
+                };
+                if (data.map.width) {
+                    updateMap(
+                        data.map,
+                        data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
+                    );
+                    if (document.body.hasAttribute("data-isDm")) {
+                        triggerNextTurn();
+                    }
                 }
+                renderMenu();
                 return true;
             }
             return false;
@@ -47,19 +118,6 @@ loadExternalScript("public/combatMap.js");
         debugger;
     });
 
-    /**
-     * Renders the map then adds all combatants to the initiative list.
-     * @param {object} data data from a GET session/map endpoint.
-     */
-    updateMap = function(data) {
-        var k, i;
-        pageContext.renderMap(data, template);
-        for (k in data.mobs) {
-            for (i = 0; i < data.mobs[k].length; i++) {
-                initiativeContext.addMob(data.mobs[k][i], true);
-            }
-        }
-    }
     document.body.setAttribute("data-state", "combat");
 })();
 </script>

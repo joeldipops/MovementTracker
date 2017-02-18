@@ -48,26 +48,36 @@ ol.initiativeList {
         body[data-state='setup'] ol.initiativeList > li > [name='position'] { display: inline-block; }
         body[data-state='setup'] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
-    body[data-state="combat"] ol.initiativeList > li {}
+    body[data-state="combat"] ol.initiativeList > li.currentTurn {
+        font-weight: bold;
+        border: 2px solid red;
+    }
+        body[data-state="combat"] ol.initiativeList > li.currentTurn::before {
+            content: ">";
+            margin-left: -1rem;
+            position: absolute;
+            font-weight: bold;
+        }
+
         body[data-state="combat"] ol.initiativeList > li > .initiativeScore { display: inline; }
         body[data-state="combat"] ol.initiativeList > li > .usedReaction { display: inline-block; }
         body[data-state='combat'] ol.initiativeList > li > [name='react'] { display: none; }
         body[data-state="combat"] ol.initiativeList > li > [name='position'] { display: none; }
         body[data-state="combat"] ol.initiativeList > li > [name='toggleMob'] { display: none; }
 
-        body[data-state="combat"] ol.initiativeList > li[data-is_my_pc] > [name='toggleMob'] { display: inline-block; }
-        body[data-state="combat"] ol.initiativeList > li[data-is_my_pc]:not([data-reacted]) > [name='react'] {
+        body[data-state="combat"] ol.initiativeList > li[data-isMyPc] > [name='toggleMob'] { display: inline-block; }
+        body[data-state="combat"] ol.initiativeList > li[data-isMyPc]:not([data-reacted]) > [name='react'] {
             display: inline-block; 
         }
 
-    body[data-state="combat"][data-is_dm] ol.initiativeList > li {}
-        body[data-state="combat"][data-is_dm] ol.initiativeList > li > .initiativeScore { display: inline; }
-        body[data-state="combat"][data-is_dm] ol.initiativeList > li > .usedReaction { display: inline-block; }
-        body[data-state="combat"][data-is_dm] ol.initiativeList > li:not([data-reacted]) > [name='react'] {
+    body[data-state="combat"][data-isDm] ol.initiativeList > li {}
+        body[data-state="combat"][data-isDm] ol.initiativeList > li > .initiativeScore { display: inline; }
+        body[data-state="combat"][data-isDm] ol.initiativeList > li > .usedReaction { display: inline-block; }
+        body[data-state="combat"][data-isDm] ol.initiativeList > li[data-mobType='npc']:not([data-reacted]) > [name='react'] {
             display: inline-block;
         }
-        body[data-state="combat"][data-is_dm] ol.initiativeList > li > [name='position'] { display: inline-block; }
-        body[data-state="combat"][data-is_dm] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
+        body[data-state="combat"][data-isDm] ol.initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state="combat"][data-isDm] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
 
 
@@ -211,3 +221,6 @@ ul.ctrl-colourOption {
     position: absolute;
     top: 200px;
 }
+
+button[name='done'] { display: none; }
+body[data-isMyTurn] button[name='done'] { display: inline-block; }

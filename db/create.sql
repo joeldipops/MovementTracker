@@ -74,6 +74,7 @@ CREATE TABLE Race (
 CREATE TABLE Player (
     PlayerId serial NOT NULL,
     WebSessionId integer NOT NULL,
+    SocketId integer NOT NULL,
     PlayerName text NOT NULL,
     PlayerType playerType NOT NULL
         CONSTRAINT DF_Player_IsDm
@@ -83,8 +84,8 @@ CREATE TABLE Player (
         CHECK ((PlayerType = 'player' AND Colour IS NOT NULL) OR PlayerType <> 'player'),
 
     CONSTRAINT PK_Player PRIMARY KEY (PlayerId),
-    CONSTRAINT FK_Player_WebSession 
-        FOREIGN KEY (WebSessionId) 
+    CONSTRAINT FK_Player_WebSession
+        FOREIGN KEY (WebSessionId)
         REFERENCES WebSession (WebSessionId)
         ON DELETE CASCADE
 );
@@ -114,21 +115,22 @@ VALUES ('Human', 'human');
 
 CREATE FUNCTION CreatePlayer(
     SessionId integer,
+    SocketId integer,
     PlayerName text,
     CharacterName text,
     PlayerType playerType,
     Colour text,
     Speed integer
 )
-    RETURNS integer AS 
+    RETURNS integer AS
 $BODY$
     DECLARE
         _playerId integer;
 BEGIN
-    INSERT INTO Player (WebSessionId, PlayerName, PlayerType, Colour)
-    VALUES (SessionId, PlayerName, PlayerType, Colour)
+    INSERT INTO Player (WebSessionId, SocketId, PlayerName, PlayerType, Colour)
+    VALUES (SessionId, SocketId, PlayerName, PlayerType, Colour)
     RETURNING PlayerId INTO _playerId;
-    
+
     -- If it's a player, add character record too.
     IF PlayerType = 'player'
     THEN
@@ -149,6 +151,7 @@ $BODY$ LANGUAGE plpgsql;
 CREATE FUNCTION UpdatePlayer(
     PlayerId integer,
     SessionId integer,
+    SocketId integer,
     PlayerName text,
     PlayerType playerType,
     Colour text,
@@ -175,7 +178,7 @@ BEGIN
         FROM PlayerCharacter P
         WHERE P.PlayerId = PlayerId;
     END IF;
-    
+
     RETURN PlayerId;
 END;
 $BODY$ LANGUAGE plpgsql;

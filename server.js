@@ -25,15 +25,17 @@ server.get("/page/ready", getReadyPage);
 server.get("/page/dm_console", getDmConsolePage);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)\/ready/, readyPlayer);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
+server.put(/session\/[0-9]+\/turn\/[0-9]+/, broadcastTurn);
+server.get(/session\/[0-9]+\/turn/, getCurrentTurn);
 
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
 server.get(/session\/[0-9]+\/map/, downloadMap);
 server.put(/session\/[0-9]+\/map/, uploadMap);
-server.get(/session(\/[0-9]+)?/, getSession);
-server.del(/session\/[0-9]+/,deleteSession); 
+server.get(/session(\/[0-9]+)?$/, getSession);
+server.del(/session\/[0-9]+/,deleteSession);
 
-/** 
+/**
  * Convenience for clearing out db after testing.
  */
 function resetSession(done) {
@@ -80,6 +82,31 @@ function downloadMap(req, res) {
 }
 
 /**
+ * Notifies all that the next turn has started.
+ */
+function broadcastTurn(req, res) {
+    var sessionId, mobId, message;
+    path = url.parse(req.url).pathname;
+    sessionId = getEntityId("session", path);
+    mobId = getEntityId("turn", path);
+    message = socketServerControl.cache(`currentTurn-${sessionId}`, {
+        "turn_start" : { id : mobId }
+    });
+    socketServerControl.broadcastJSON(message);
+
+    res.writeHead(200);
+    res.end();
+};
+
+/**
+ * Returns the id of the player whose turn it is.
+ */
+function getCurrentTurn(req, res) {
+    var sessionId = getEntityId("session", req);
+    return serveJSON(res, socketServerControl.cache(`currentTurn-${sessionId}`));
+};
+
+/**
  * Creates or updates a player.
  */
 function putPlayer(req, res) {
@@ -92,6 +119,7 @@ function putPlayer(req, res) {
 
     dbParams = [
         sessionId,
+        req.body.socket_id,
         req.body.player_name,
         req.body.character_name,
         req.body.player_type,
@@ -112,7 +140,7 @@ function putPlayer(req, res) {
         if (!result) {
             return serveError(res);
         }
-        player = socketServerControl.cache(req.body.socket_id, { 
+        player = socketServerControl.cache(req.body.socket_id, {
             player_id : result.rows[0].playerid,
             socket_id : req.body.socket_id,
             player_type : req.body.player_type,
@@ -146,6 +174,7 @@ function putPlayer(req, res) {
  */
 function readyPlayer(req, res) {
     var playerId = getEntityId("player", req);
+    socketServerControl.cache(req.body.socket_id, { initiative : req.body.initiative});
     socketServerControl.broadcastJSON({
         "player_update" : {
             player_id : playerId,
@@ -189,7 +218,7 @@ function deleteSession(req, res) {
 };
 
 function getPlayerList(req, res) {
-    var path, sessionId, params;
+    var path, sessionId, params, cached;
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
     params = getParams(req);
@@ -201,7 +230,8 @@ function getPlayerList(req, res) {
         }
         body = { players : [] };
         for (i = 0; i < result.rows.length; i++) {
-            
+            cached = socketServerControl.cache(result.rows[i].socketid);
+
             body.players.push({
                 player_id: result.rows[i].playerid,
                 player_name: result.rows[i].playername,
@@ -209,7 +239,8 @@ function getPlayerList(req, res) {
                 player_type: result.rows[i].playertype,
                 colour: result.rows[i].colour,
                 size: result.rows[i].size,
-                speed: result.rows[i].speed
+                speed: result.rows[i].speed,
+                initiative: cached && cached.initiative
             });
         }
 

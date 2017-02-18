@@ -17,14 +17,15 @@
 window.initiativeContext = {};
 (function socialScript() {
     var onReceiveMessage, onClose, bindInputEvents,
-        addPlayer, removePlayer, addDM, removeDM,
-        template, _listEl, _subscribers, _events;
+        addPlayer, removePlayer, addDM, removeDM, startNextTurn, getNext,
+        _template, _listEl, _subscribers, _events, _orderIndex;
 
     _listEl = document.querySelector("#social ol.initiativeList");
     _subscribers = {};
     _events = [];
+    _orderIndex = 1;
 
-    template = document.querySelector("#template-initiativeListItem").innerHTML;
+    _template = document.querySelector("#template-initiativeListItem").innerHTML;
 
     /**
      * Cleans up bound events.
@@ -60,15 +61,21 @@ window.initiativeContext = {};
       */
      fireEvent = function(li, event) {
          var name, data, i;
-         name = event.currentTarget.getAttribute("name");
+         if (typeof event === "string") {
+             name = event;
+         } else {
+            name = event.currentTarget.getAttribute("name");
+         }
+
          if (_subscribers[name] && _subscribers[name].length) {
             data = {};
             data.id = li.getAttribute("data-id");
             data.size = li.getAttribute("data-size");
-            data.mob_type = li.getAttribute("data-mobtype");
+            data.mob_type = li.getAttribute("data-mobType");
             data.colour = li.style.color;
             data.character_name = li.querySelector(".mobName").innerHTML;
             data.initiative = parseInt(li.getAttribute("data-initiative"));
+            data.order = parseInt(li.getAttribute("data-order"));
 
             for (i = 0; i < _subscribers[name].length; i++) {
                 _subscribers[name][i](data);
@@ -101,7 +108,9 @@ window.initiativeContext = {};
         if (data["session_id"]) {
             refreshList();
         }
-
+        if (data["turn_start"]) {
+            startNextTurn(data["turn_start"]);
+        }
     };
 
     /**
@@ -140,15 +149,17 @@ window.initiativeContext = {};
         while (_listEl.firstChild) {
             _listEl.removeChild(_listEl.firstChild);
         }
+        _orderIndex = 1;
     };
 
     /**
      * Adds a mob to the list, by correct sort order.
      * @param {object} data describing the player
      * @param {boolean} isUpdate true if updating a player already in the list.
+     * @param {boolean} isTurn true if it's this players turn.
      */
-    addPlayer = function(data, isUpdate) {
-        var list, li, fragment,
+    addPlayer = function(data, isUpdate, isTurn) {
+        var list, li, otherLi, fragment,
             inserted, i, extant, init;
         if (!isNaN(data.player_id)) {
             data.id = data.player_id
@@ -160,7 +171,7 @@ window.initiativeContext = {};
             // probably would be faster to manipulate the template than the element...
             fragment = document.createDocumentFragment();
             fragment.appendChild(document.createElement("span"));
-            fragment.firstElementChild.insertAdjacentHTML("beforeend", template);
+            fragment.firstElementChild.insertAdjacentHTML("beforeend", _template);
             li = fragment.firstElementChild.firstElementChild;
         } else if (!isUpdate) {
             return;
@@ -169,17 +180,28 @@ window.initiativeContext = {};
         }
 
         li.setAttribute("data-id", data.id);
-        li.setAttribute("data-mobType", isNaN(data.player_id) ? "npc" : "pc");
+        li.setAttribute("data-mobType", data.mob_type || (isNaN(data.player_id) ? "npc" : "pc"));
 
         if (data.colour) { li.style.color = "#" + data.colour; }
         if (data.size) { li.setAttribute("data-size", data.size); }
         if (data.character_name) { li.querySelector(".mobName").innerHTML = data.character_name; }
+        if (window.playerId === data.id) {
+            li.setAttribute("data-isMyPc", "isMyPc");
+        } else {
+            li.removeAttribute("data-isMyPc");
+        }
 
+        // Add mobs in initiative order.
         if (!isNaN(data.initiative)) {
             inserted = false;
             li.parentNode.removeChild(li);
             li.querySelector(".initiativeScore").innerHTML = data.initiative;
             li.setAttribute("data-initiative", data.initiative);
+            if (!data.order) {
+                data.order = _orderIndex;
+                _orderIndex++;
+            }
+            li.setAttribute("data-order", data.order);
 
             extant = _listEl.querySelectorAll("li.mob");
             for (i = 0; i < extant.length; i++) {
@@ -189,19 +211,28 @@ window.initiativeContext = {};
                     inserted = true;
                     break;
                 } else if (data.initiative === init) {
-                    // Later rollers go later in the list.
-                    _listEl.insertBefore(li, extant[i+1]);
-                    inserted = true;
-                    break;
+                    // If same initiative, use the order property.
+                    init = extant[i].getAttribute("data-order");
+                    if (data.order < init) {
+                        _listEl.insertBefore(li, extant[i]);
+                        inserted = true;
+                        break;
+                    }
                 }
             }
-        } else {
-
         }
 
         // If initiative not set, just append to the end.
         if (!inserted) {
             _listEl.appendChild(li);
+        }
+        
+        if (isTurn) {
+            otherLi = _listEl.querySelector(".currentTurn");
+            if (otherLi) {
+                otherLi.classList.remove("currentTurn");
+            }
+            li.classList.add("currentTurn");
         }
         bindInputEvents(li);
     };
@@ -218,6 +249,8 @@ window.initiativeContext = {};
                 throw "No players";
             }
 
+            removeAll();
+
             players = result.players;
             for (i = 0; i < players.length; i++) {
                 switch (players[i].player_type) {
@@ -231,6 +264,34 @@ window.initiativeContext = {};
             console.error(JSON.stringify(err));
         });
     };
+    
+    /**
+     * Sets the display for the next turn of combat.
+     */
+    startNextTurn = function(data) {
+        var li = _listEl.querySelector(".currentTurn");
+        if (li) {
+            li.classList.remove("currentTurn");
+        }
+        li = _listEl.querySelector("[data-id='" + data.id + "']");
+        li.classList.add("currentTurn");
+        fireEvent(li, "turn_start");
+    };
+    
+    /**
+     * Returns the li of the next turn.
+     * @returns {HTMLElement} the list of the mob who has the next turn.
+     */
+    getNext = function() {
+        // TODO: 0HP mobs.
+        var el;
+        if(!(el = _listEl.querySelector(".currentTurn + li"))) {
+            // Will select the first that actually has init.
+            el = _listEl.querySelector("[data-initiative]");
+        }
+        return el;
+    };
+
     if(window.sessionId) {
         refreshList();
     }
@@ -238,6 +299,27 @@ window.initiativeContext = {};
     window.socket.addEventListener("message", onReceiveMessage);
     window.initiativeContext.addMob = addPlayer;
     window.initiativeContext.removeMob = removePlayer;
+
+    /**
+     * Removes any NPCs from the list, but keeps players.
+     */
+    window.initiativeContext.clearNpcs = function() {
+        var i, list;
+        list = _listEl.querySelectorAll("[data-mobType='npc']");
+        for (i = 0; i < list.length; i++) {
+            removePlayer({
+                id : list[i].getAttribute("data-id")
+            });
+        }
+    };
+
+    /**
+     * Finds who has the next turn according to the initiative order.
+     * @returns {string} id of the mob who is next.
+     */
+    window.initiativeContext.getNext = function() {
+        return getNext().getAttribute("data-id");
+    };
 
     /**
      * Subscribes to an event triggered by some operation or interation on the list.

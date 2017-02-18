@@ -114,9 +114,9 @@
 
         result.then(function(result) {
             var result = JSON.parse(result.responseText);
-            window.playerId = result.player_id;
+            window.playerId = result.player_id.toString();
             if (body.player_type === "dm") {
-                document.body.setAttribute("data-is_dm", "true");
+                document.body.setAttribute("data-isDm", "isDm");
                 return replaceBody("dm_console");
             } else {
                 return replaceBody("ready");

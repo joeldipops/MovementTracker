@@ -29,11 +29,11 @@ LIMIT 1
     ;`,
 
     createPlayer: `
-SELECT CreatePlayer($1, $2, $3, $4, $5, $6) AS PlayerId;
+SELECT CreatePlayer($1, $2, $3, $4, $5, $6, $7) AS PlayerId;
     `,
 
     updatePlayer: `
-SELECT UpdatePlayer($1, $2, $3, $4, $5, $6) AS PlayerId;
+SELECT UpdatePlayer($1, $2, $3, $4, $5, $6, $7) AS PlayerId;
     `,
 
     deletePlayer: `
@@ -44,6 +44,7 @@ WHERE PlayerId = $1
     getPlayers: `
 SELECT 
     P.PlayerId,
+    P.SocketId,
     P.PlayerName,
     P.PlayerType,
     P.Colour,
@@ -53,7 +54,7 @@ SELECT
 FROM Player P
     INNER JOIN PlayerCharacter PC
     ON PC.PlayerId = P.PlayerId
-    
+
     INNER JOIN Race R
     ON R.RaceId = PC.RaceId
 WHERE WebSessionId = $1
