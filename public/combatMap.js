@@ -1,6 +1,6 @@
 (function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex, isIdEqual;
-    
+
     _mapEvents = [];
     _mapEl = document.getElementById("map");
     _mobs = {};
@@ -47,11 +47,11 @@
                     newTd = document.createElement("th");
                     if (x !== 0) {
                         newTd.setAttribute("scope", "column");
-                        newTd.innerHTML = x;
+                        newTd.innerHTML = x * UNITS_PER_TILE;
                     }
                     if (y !== 0) {
                         newTd.setAttribute("scope", "row");
-                        newTd.innerHTML = y;
+                        newTd.innerHTML = y * UNITS_PER_TILE;
                     }
                     newTr.appendChild(newTd);
                 } else {
@@ -265,6 +265,18 @@
         mobEl = cell.parentElement.querySelector(".mob[data-id='" + data.id + "']");
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
+        }
+    };
+    
+    /**
+     * Ensures no element on the map has the given class.
+     * @param {string} name of class to remove.
+     */
+    pageContext.removeClass = function(name) {
+        var i, list;
+        list = _mapEl.getElementsByClassName(name);
+        for (i = 0; i < list.length; i++) {
+            list[i].classList.remove(name);
         }
     };
 

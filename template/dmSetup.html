@@ -126,7 +126,7 @@ loadExternalScript("public/combatMap.js");
         delete window.sessionId;
     };
 
-    /** 
+    /**
      * Moves mob with id from one location to another
      */
     moveMob = function(data, event) {
@@ -135,7 +135,9 @@ loadExternalScript("public/combatMap.js");
         if (mob) {
             pageContext.removeMob(mob);
         }
-        addMob(clone(data), event)
+        if (!addMob(clone(data), event)) {
+            pageContext.setMob(mob.x, mob.y, mob);
+        }
     };
 
     /**
@@ -165,11 +167,9 @@ loadExternalScript("public/combatMap.js");
         extant = pageContext.getMob(x, y);
 
         for (i = 0; i < (extant ? extant.length : 0); i++) {
-            // TODO - figure out the rules for this.
-            // "a creature cannot enter the same space of another of the same size or smaller?"
-            // Not quite right, but gives something to work with.
-            if (size.rank <= pageContext.mobSizes[extant[i].size].rank) {
-                return
+            // "a creature cannot enter the same space of another unless they are two sizes smaller or larger.
+            if ((size.rank - pageContext.mobSizes[extant[i].size].rank) <= 1) {
+                return false;
             }
         }
 
@@ -184,6 +184,7 @@ loadExternalScript("public/combatMap.js");
                 pageContext.setMob(i, j, data);
             }
         }
+        return true;
     };
 
     /**

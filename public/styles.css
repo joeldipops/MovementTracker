@@ -85,22 +85,21 @@ td.ctrl-combatCell {
     position: relative;
 }
 
-    td.ctrl-combatCell > button:first-child {
+    td.ctrl-combatCell > .terrain {
         height: 100%;
         width: 100%;
         border-width: 0;
         background-color: inherit;
     }
 
-    td.ctrl-combatCell > button:first-child:focus,
-    td.ctrl-combatCell > button:first-child:active {
+    td.ctrl-combatCell > .terrain:focus,
+    td.ctrl-combatCell > .terrain:active {
         background-color: rgba(0,0,0,0.2);
     }
-    td.ctrl-combatCell > button:first-child:hover {
+    td.ctrl-combatCell > .terrain:hover {
         background-color: rgba(0,0,0,0.1);
     }
 
-    td.ctrl-combatCell > button + button,
     td.ctrl-combatCell > button + div {
         position: absolute;
         width: 50%;
@@ -120,6 +119,14 @@ td.ctrl-combatCell {
         border-width: 3px;
         border-style: groove;
         font-weight: bold;
+    }
+
+    td.ctrl-combatCell > .terrain.reachable:hover {
+        background-color: rgba(0, 255, 0, 0.4);
+    }
+
+    td.ctrl-combatCell > .terrain.unreachable:hover {
+        background-color: rgba(255, 0, 0, 0.4);
     }
 
 table.ctrl-combatMap {

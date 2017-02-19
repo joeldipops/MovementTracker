@@ -23,7 +23,9 @@ server.get("/page/home", getIndex);
 server.get("/page/play", getPlayPage);
 server.get("/page/ready", getReadyPage);
 server.get("/page/dm_console", getDmConsolePage);
-server.put(/session\/[0-9]+\/player(\/[0-9]+)\/ready/, readyPlayer);
+server.put(/session\/[0-9]+\/player\/[0-9]+\/ready/, readyPlayer);
+server.put(/session\/[0-9]+\/player\/[0-9]+\/move/, movePlayer);
+server.post(/session\/[0-9]+\/player\/[0-9]+\/react/, useReaction);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.put(/session\/[0-9]+\/turn\/[0-9]+/, broadcastTurn);
 server.get(/session\/[0-9]+\/turn/, getCurrentTurn);
@@ -181,6 +183,25 @@ function readyPlayer(req, res) {
         "player_update" : {
             player_id : playerId,
             initiative : req.body.initiative
+        }
+    });
+    res.writeHead(200);
+    res.end();
+};
+
+function useReaction(req, res) {
+};
+
+/**
+ * Notifies all users that the player has moved.
+ */
+function movePlayer(req, res) {
+    var id = getEntityId("player", req);
+    socketServerControl.broadcastJSON({
+        "player_move" : {
+            id : id,
+            x : req.body.x,
+            y : req.body.y
         }
     });
     res.writeHead(200);

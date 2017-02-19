@@ -184,8 +184,8 @@ window.initiativeContext = {};
 
         li.setAttribute("data-id", data.id);
         li.setAttribute("data-mobType", data.mob_type || (isNaN(data.player_id) ? "npc" : "pc"));
-        li.setAttribute("data-speed", data.speed.walk);
 
+        if (data.speed) { li.setAttribute("data-speed", data.speed.walk); }
         if (data.colour) { li.style.color = "#" + data.colour; }
         if (data.size) { li.setAttribute("data-size", data.size); }
         if (data.character_name) { li.querySelector(".mobName").innerHTML = data.character_name; }

@@ -1,7 +1,7 @@
-var DEFAULT, mainEl,
+var UNITS_PER_TILE, mainEl,
 onEvent, closePage, newPromise, wait, pageContext;
 
-DEFAULT = false;
+UNITS_PER_TILE = 5;
 pageContext = {};
 
 var a = function() {

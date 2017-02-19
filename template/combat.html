@@ -15,7 +15,7 @@ loadExternalScript("public/combatMap.js");
     <label for="movementType-{type}" data-base="{remaining}" data-remaining="{remaining}" data-used="0">
         <h6>{text}</h6>
         <span name="remaining">{remaining}</span>
-        <input type="radio" name="movementType" value="{type}" />
+        <input id="movementType-{type}" type="radio" name="movementType" value="{type}" />
     </label>
 </script>
 <script id="template-controls" type="text/html">
@@ -32,9 +32,11 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function combatScript() {
-    var onMessageReceived, updateMap, triggerNextTurn, renderMenu,
-        onTurnStart, onMyTurnStart, onDashChange,
+    var updateMap, triggerNextTurn, renderMenu, isInRange, getDistance, subtractMovement,
+        onMessageReceived, onTurnStart, onMyTurnStart, onDashChange, onTerrainMouseOver, onTerrainClick,
+        onPlayerMove,
         template, _menuEl;
+
     template = mainEl.querySelector("#template-combatCell").innerHTML;
     _menuEl = document.getElementById("controls");
 
@@ -114,6 +116,7 @@ loadExternalScript("public/combatMap.js");
              list[i].checked = false;
         }
 
+        // Add the speeds we have access to.
         for (k in pageContext.movementTypes) {
             if (!pageContext.movementTypes.hasOwnProperty(k)) {
                 continue;
@@ -128,6 +131,8 @@ loadExternalScript("public/combatMap.js");
                 .replace(/{remaining}/g, data.speed[k]);
             el.insertAdjacentHTML("beforeend", temp);
         }
+        // Auto select walk.
+        el.firstElementChild.querySelector("[name='movementType'][value='walk']").checked = true;
     }
 
     /**
@@ -136,8 +141,8 @@ loadExternalScript("public/combatMap.js");
     triggerNextTurn = function() {
         var id = initiativeContext.getNext();
         sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
+        pageContext.removeMapEvents();
     };
-    
 
     /**
      * Reset the UI when each new turn starts
@@ -145,12 +150,13 @@ loadExternalScript("public/combatMap.js");
      */
     onTurnStart = function(data) {
         var heading;
+        pageContext.removeMapEvents();
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
             // DM's turn for NPCs
             onMyTurnStart(data);
         } else if (data.id === window.playerId) {
             // Player's turn.
-            onMyTurnStart();
+            onMyTurnStart(data);
         } else {
             // Switch off for everyone else.
             document.body.removeAttribute("data-isMyTurn");
@@ -164,8 +170,150 @@ loadExternalScript("public/combatMap.js");
             heading.classList.add("updated");
         }, 50);
     };
-    window.initiativeContext.onListEvent("turn_start", onTurnStart);    
-    
+    window.initiativeContext.onListEvent("turn_start", onTurnStart);
+
+    /**
+     * Calculates whether the mob can reach the given point this turn.
+     * @param {HTMLElement} current tile the mob is currently on.
+     * @param {HTMLElement} candidate tile the mob tries to reach.
+     * @param {object} speed object with mobs selected movement speed.
+     * @returns {boolean} true is point can be reach.
+     */
+    isInRange = function(current, candidate, speed) {
+        if (speed.remaining <= 0) {
+            return false;
+        }
+        if (getDistance(
+            parseInt(candidate.getAttribute("data-x")),
+            parseInt(candidate.getAttribute("data-y")),
+            parseInt(current.getAttribute("data-x")),
+            parseInt(current.getAttribute("data-y"))
+        ) > speed.remaining) {
+            return false;
+        }
+        return true;
+    };
+
+    /**
+     * Calculates the distance between two points.
+     * TODO: Difficult terrain etc.
+     * @param {number} x1
+     * @param {number} y1
+     * @param {number} x2
+     * @param {number} y2
+     * @returns {number} The distance.
+     */
+    getDistance = function(x1, y1, x2, y2) {
+        // Pythagoras
+        distance = Math.sqrt(Math.pow(Math.abs(x2 - x1), 2) + Math.pow(Math.abs(y2 - y1), 2));
+        // Apply transformation and remove decimal.
+        distance = Math.floor(distance * UNITS_PER_TILE);
+        // Can't be less than 0
+        return distance >= 0 ? distance : 0;
+    };
+
+    /**
+     * Determines if a tile is within range and changes the colour if so.
+     * @param {MouseEvent} event The event containing the element that was clicked.
+     */
+    onTerrainMouseOver = function(mob, event) {
+        var loc, current, speedEl;
+
+        pageContext.removeClass("reachable");
+        pageContext.removeClass("unreachable");
+        loc = pageContext.getMobWithId(mob.id);
+        current = pageContext.getCell(loc.x, loc.y);
+
+        speedEl = _menuEl.querySelector("[name='movementType']:checked");
+
+        if (isInRange(current, event.currentTarget, {
+            type: speedEl.value,
+            remaining : speedEl.parentElement.getAttribute("data-remaining")
+        })) {
+            event.currentTarget.classList.add("reachable");
+        } else {
+            event.currentTarget.classList.add("unreachable");
+        }
+    };
+
+    /**
+     * Selects a tile for movement on a click.
+     * Moves mob to new location on a double click.
+     * @param {object} mob The mob to move.
+     * @param {MouseEvent} event click event containing element that was clicked.
+     */
+    onTerrainClick = function(mob, event) {
+        var distance, loc;
+        if (!event.currentTarget.classList.contains("selected")) {
+            // Update which tile is selected.
+            pageContext.removeClass("selected");
+            event.currentTarget.classList.add("selected");
+            // Set the colour (important for mobile).
+            onTerrainMouseOver(mob, event);
+        } else {
+            speedEl = _menuEl.querySelector("[name='movementType']:checked");
+            loc = pageContext.getMobWithId(mob.id);
+            if (isInRange(
+                pageContext.getCell(loc.x, loc.y),
+                event.currentTarget,
+                {
+                    type: speedEl.value,
+                    remaining : parseInt(speedEl.parentElement.getAttribute("data-remaining"))
+                }
+            )) {
+                distance = moveMob(mob, event.currentTarget);
+                subtractMovement(distance, speedEl.parentElement);
+            }
+        }
+    };
+
+    /**
+     * Updates your remaining movement after any move.
+     * @param {number} distance How far was moved.
+     * @param {HTMLElement} el Element with movement/speed details.
+     */
+    subtractMovement = function(distance, el) {
+        var remaining;
+        el.setAttribute("data-used", parseInt(el.getAttribute("data-used")) + distance);
+        remaining = parseInt(el.getAttribute("data-remaining")) - distance;
+        remaining = remaining >= 0 ? remaining : 0;
+        el.setAttribute("data-remaining", remaining);
+        el.querySelector("[name='remaining']").innerHTML = remaining;
+    };
+
+    /**
+     * Moves a mob to a new location
+     * @param {object} mob The mob to move.
+     * @param {HTMLElement} location The tile to move to.
+     * @param {boolean} silent If true, don't notify other users.
+     * @returns {number} The distance moved.
+     */
+    moveMob = function(mob, location, silent) {
+        var x1, y1, x, y, distance;
+        mob = pageContext.getMobWithId(mob.id);
+        x1 = mob.x;
+        y1 = mob.y;
+        if (mob) {
+            pageContext.removeMob(mob);
+        }
+
+        x = parseInt(location.getAttribute("data-x"));
+        y = parseInt(location.getAttribute("data-y")),
+
+        pageContext.setMob(x, y, mob);
+
+        // Notify all of the move.
+        if (!silent) {
+            sendHttpRequest(
+                "session/" + window.sessionId + "/player/" + mob.id + "/move",
+                "PUT",
+                { x : x, y: y }
+            );
+        }
+
+        return getDistance(x1, y1, x, y);
+    };
+
     /**
      * Sets up everything for the current player's turn.
      * @param {object} data Details of the mob whose turn it is.
@@ -173,6 +321,16 @@ loadExternalScript("public/combatMap.js");
     onMyTurnStart = function(data) {
         document.body.setAttribute("data-isMyTurn", "isMyTurn");
         resetMenu(data);
+        pageContext.onMapEvent("td > .terrain", "mouseover", onTerrainMouseOver.bind({}, data));
+        pageContext.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data));
+    };
+    
+    /**
+     * Updates the map when a player_move event is received.
+     */
+    onPlayerMove = function(data) {
+        var newLocation = pageContext.getCell(data.x, data.y);
+        moveMob(data, newLocation, true);
     };
 
     /**
@@ -183,6 +341,9 @@ loadExternalScript("public/combatMap.js");
         data = JSON.parse(event.data);
         if (data["map_update"]) {
             updateMap(data["map_update"]);
+        }
+        if (data["player_move"]) {
+            onPlayerMove(data["player_move"]);
         }
     };
     onEvent(window.socket, "message", onReceiveMessage);
