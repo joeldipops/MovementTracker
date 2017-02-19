@@ -1,5 +1,5 @@
 <article id="turn">
-    <h3></h3>
+    <h3 class="turnHeading">Hello World</h3>
     <table id="map" class="ctrl-combatMap">
     </table>
 </article>
@@ -11,14 +11,32 @@ loadExternalScript("public/combatMap.js");
     <button class="terrain">&nbsp;</button>
 </td>
 </script>
+<script id="template-movementOption" type="text/html">
+    <label for="movementType-{type}" data-base="{remaining}" data-remaining="{remaining}" data-used="0">
+        <h6>{text}</h6>
+        <span name="remaining">{remaining}</span>
+        <input type="radio" name="movementType" value="{type}" />
+    </label>
+</script>
 <script id="template-controls" type="text/html">
+    <div class="ctrl-speedOptions"></div>
+    <div>
+        <label for="dashAction">Use Dash Action</label>
+        <input if="dashAction" type="checkbox" name="dashAction" />
+    </div>
+    <div>
+        <label for="dashBonus">Dash as Bonus Action</label>
+        <input id="dashBonus" type="checkbox" name="dashBonus" />
+    </div>
     <button name="done">Done</button>
 </script>
 <script type="application/javascript">
 (function combatScript() {
     var onMessageReceived, updateMap, triggerNextTurn, renderMenu,
-        template;
-    template = document.querySelector("#template-combatCell").innerHTML;
+        onTurnStart, onMyTurnStart, onDashChange,
+        template, _menuEl;
+    template = mainEl.querySelector("#template-combatCell").innerHTML;
+    _menuEl = document.getElementById("controls");
 
     /**
      * Renders the map then adds all combatants to the initiative list.
@@ -40,17 +58,77 @@ loadExternalScript("public/combatMap.js");
      * Sets the controls for this stage of the app.
      */
     renderMenu = function() {
-        var template, menu;
+        var template, k;
         template = document.getElementById("template-controls").innerHTML;
-        menu = document.getElementById("controls");
 
-        while(menu.firstElementChild) {
-            menu.removeChild(menu.firstElementChild);
+        while(_menuEl.firstElementChild) {
+            _menuEl.removeChild(_menuEl.firstElementChild);
         }
-        menu.insertAdjacentHTML("beforeend", template);
-
+        _menuEl.insertAdjacentHTML("beforeend", template);
         onEvent("[name='done']", "click", triggerNextTurn);
+        onEvent("[name='dashAction']", "change", onDashChange);
+        onEvent("[name='dashBonus']", "change", onDashChange);
     };
+
+    /**
+     * If player chooses to user her/his action/bonus to dash, adjust the remaining speed.
+     */
+    onDashChange = function() {
+        var el, base, max;
+        el = _menuEl.querySelector("[for='movementType-walk']");
+        base = parseInt(el.getAttribute("data-base"));
+        used = parseInt(el.getAttribute("data-used"));
+        total = base;
+
+        if (_menuEl.querySelector("[name='dashAction']:checked")) {
+            total += base;
+        }
+        if (_menuEl.querySelector("[name='dashBonus']:checked")) {
+            total += base;
+        }
+
+        total -= parseInt(el.getAttribute("data-used"));
+
+        if (total < 0) {
+            total = 0;
+        }
+
+        el.setAttribute("data-remaining", total);
+        el.querySelector("[name='remaining']").innerHTML = total;
+    };
+
+    /**
+     * Sets the menu up for user at the start of a turn.
+     * @param {object} data describes the mob about to take a turn.
+     */
+    resetMenu = function(data) {
+        var template, temp, el, list, i;
+        template = document.getElementById("template-movementOption").innerHTML;
+        el = _menuEl.querySelector(".ctrl-speedOptions");
+        while(el.firstElementChild) {
+            el.removeChild(el.firstElementChild);
+        }
+
+        list = _menuEl.querySelectorAll(":checked")
+        for (i = 0; i < list.length; i++) {
+             list[i].checked = false;
+        }
+
+        for (k in pageContext.movementTypes) {
+            if (!pageContext.movementTypes.hasOwnProperty(k)) {
+                continue;
+            }
+            // We don't have this speed.
+            if (!data.speed[k]) {
+                continue;
+            }
+
+            temp = template.replace(/{type}/g, k)
+                .replace(/{text}/g, pageContext.movementTypes[k].text)
+                .replace(/{remaining}/g, data.speed[k]);
+            el.insertAdjacentHTML("beforeend", temp);
+        }
+    }
 
     /**
      * Determines who has the next turn and broadcasts to everyone.
@@ -58,6 +136,43 @@ loadExternalScript("public/combatMap.js");
     triggerNextTurn = function() {
         var id = initiativeContext.getNext();
         sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
+    };
+    
+
+    /**
+     * Reset the UI when each new turn starts
+     * @param {object} data the mob whose turn it is.
+     */
+    onTurnStart = function(data) {
+        var heading;
+        if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
+            // DM's turn for NPCs
+            onMyTurnStart(data);
+        } else if (data.id === window.playerId) {
+            // Player's turn.
+            onMyTurnStart();
+        } else {
+            // Switch off for everyone else.
+            document.body.removeAttribute("data-isMyTurn");
+        }
+        window.pageContext.setTurn(data.id);
+        heading = mainEl.querySelector(".turnHeading");
+        heading.classList.remove("updated");
+        heading.innerHTML = data.character_name + "'s Turn";
+
+        setTimeout(function() {
+            heading.classList.add("updated");
+        }, 50);
+    };
+    window.initiativeContext.onListEvent("turn_start", onTurnStart);    
+    
+    /**
+     * Sets up everything for the current player's turn.
+     * @param {object} data Details of the mob whose turn it is.
+     */
+    onMyTurnStart = function(data) {
+        document.body.setAttribute("data-isMyTurn", "isMyTurn");
+        resetMenu(data);
     };
 
     /**
@@ -71,19 +186,6 @@ loadExternalScript("public/combatMap.js");
         }
     };
     onEvent(window.socket, "message", onReceiveMessage);
-
-    window.initiativeContext.onListEvent("turn_start", function(data) {
-        if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
-            // DM's turn for NPCs
-            document.body.setAttribute("data-isMyTurn", "isMyTurn");
-        } else if (data.id === window.playerId) {
-            // Player's turn.
-            document.body.setAttribute("data-isMyTurn", "isMyTurn");
-        } else {
-            // Switch off for everyone else.
-            document.body.removeAttribute("data-isMyTurn");
-        }
-    });
 
     runAsync([
         // Get the current state of the map.

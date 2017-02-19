@@ -92,6 +92,21 @@
     };
 
     /**
+     * Highlights a mob on their turn.
+     * @param {string} id of the mob.
+     */
+    pageContext.setTurn = function(id) {
+        var hasTurn;
+        // End the previous turn.
+        if (hasTurn = _mapEl.querySelector(".hasTurn")) {
+            hasTurn.classList.remove("hasTurn");
+        }
+        if (hasTurn = _mapEl.querySelector("[data-id='" + id + "']")) {
+            hasTurn.classList.add("hasTurn");
+        }
+    };
+
+    /**
      * Adds an event in the context of the combat map that can be unbound easily.
      * @param {string} selector querySelectorAll parameter.
      * @param {string} event name of the event.
@@ -127,6 +142,12 @@
         climbable: { text: "Climbable", colour: "#DDAAAA" },
         swimable: { text: "Swimable", colour: "#0000FF" },
         impassable: { text: "Impassable", colour: "#000000" }
+    };
+
+    pageContext.movementTypes = {
+        walk : { text : "Walk", passableTerrain : ["normal, difficult, climbable"] },
+        swim: { text : "Swim", passableTerrain : ["swimable"] },
+        fly : { text : "Fly", passableTerrain : ["normal, difficult, climable, swimmable"] }
     };
 
     // Not authoritative sizes.
@@ -245,6 +266,17 @@
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
         }
+    };
+
+    /**
+     * Gets the width and height of the map.
+     * @returns {object} with width and height properties.
+     */
+    pageContext.getSize = function() {
+        return {
+            height: parseInt(_mapEl.getAttribute("data-height")),
+            width: parseInt(_mapEl.getAttribute("data-width"))
+        };
     };
 
     /**

@@ -146,7 +146,9 @@ function putPlayer(req, res) {
             player_type : req.body.player_type,
             colour: req.body.colour,
             size : req.body.size || "medium",
-            speed : req.body.speed
+            speed : {
+                walk : req.body.speed
+            }
         });
         if (!playerId) {
             switch(req.body.player_type) {
@@ -239,7 +241,9 @@ function getPlayerList(req, res) {
                 player_type: result.rows[i].playertype,
                 colour: result.rows[i].colour,
                 size: result.rows[i].size,
-                speed: result.rows[i].speed,
+                speed: {
+                    walk : result.rows[i].speed
+                },
                 initiative: cached && cached.initiative
             });
         }

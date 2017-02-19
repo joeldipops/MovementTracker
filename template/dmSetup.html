@@ -26,8 +26,8 @@
                 <input type="number" id="npcInitiative" name="npcInitiative" value="10" />
             </div>
             <div>
-                <label for="npcSize">Speed</label>
-                <select id="npcSize" name="npcSpeed"></select>
+                <label for="npcSpeed">Walk Speed</label>
+                <input type="number" id="npcSpeed" name="npcSpeed" value="30" />
             </div>
             <div>
                 <label for="npcSize">Size</label>
@@ -144,7 +144,7 @@ loadExternalScript("public/combatMap.js");
      * @param {DOMEvent} event The click event describing where to add the terrain.
      */
     addMob = function(data, event) {
-        var x, y, size, extant,
+        var x, y, size, extant, mapSize,
             i, j, el, container, orig;
 
         orig = data;
@@ -173,8 +173,9 @@ loadExternalScript("public/combatMap.js");
             }
         }
 
-        maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
-        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));
+        mapSize = pageContext.getSize();
+        maxX = mapSize.width;
+        maxY = mapSize.height;
 
         for (i = x; i < x + size.tiles && i <= maxX; i++) {
             for (j = y; j < y + size.tiles && j <= maxY; j++) {
@@ -199,9 +200,9 @@ loadExternalScript("public/combatMap.js");
         height = parseInt(document.querySelector("[name='terrainLength']").value);
         type = document.querySelector("[name='terrainType']:checked").value;
 
-        // Temporary until I figure out what to do vis-a-vis code reuse.
-        maxX = parseInt(document.getElementById("map").getAttribute("data-width"));
-        maxY = parseInt(document.getElementById("map").getAttribute("data-height"));
+        mapSize = pageContext.getSize();
+        maxX = mapSize.width;
+        maxY = mapSize.height;
 
         for (X = x; X < (x + width) && X <= maxX; X++) {
             for(Y = y; Y < (y + height) && Y <= maxY; Y++) {
@@ -215,8 +216,8 @@ loadExternalScript("public/combatMap.js");
      */
     generateMap = function() {
         var width, height;
-        width = parseInt(document.querySelector("input[name='mapWidth']").value);
-        height = parseInt(document.querySelector("input[name='mapHeight']").value);
+        width = parseInt(document.querySelector("[name='mapWidth']").value);
+        height = parseInt(document.querySelector("[name='mapHeight']").value);
         clear();
         pageContext.renderMap({
             width: width,
@@ -271,7 +272,9 @@ loadExternalScript("public/combatMap.js");
                 character_name : name,
                 initiative : init,
                 size : document.querySelector("[name='npcSize']").value,
-                speed : document.querySelector("[name='npcSpeed']").value,
+                speed : {
+                    walk : document.querySelector("[name='npcSpeed']").value
+                },
                 id : (new Date()).valueOf().toString()
             };
 

@@ -4,7 +4,7 @@
     <ol class="initiativeList"></ol>
 </section>
 <script id="template-initiativeListItem" type="text/html">
-<li class="mob" data-id="" data-mobType="" data-initiative="">
+<li class="mob" data-id="" data-mobType="" data-initiative="" data-speed="">
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
     <span class="usedReaction">No</span>
@@ -76,6 +76,9 @@ window.initiativeContext = {};
             data.character_name = li.querySelector(".mobName").innerHTML;
             data.initiative = parseInt(li.getAttribute("data-initiative"));
             data.order = parseInt(li.getAttribute("data-order"));
+            data.speed = {
+                walk : parseInt(li.getAttribute("data-speed"))
+            };
 
             for (i = 0; i < _subscribers[name].length; i++) {
                 _subscribers[name][i](data);
@@ -181,6 +184,7 @@ window.initiativeContext = {};
 
         li.setAttribute("data-id", data.id);
         li.setAttribute("data-mobType", data.mob_type || (isNaN(data.player_id) ? "npc" : "pc"));
+        li.setAttribute("data-speed", data.speed.walk);
 
         if (data.colour) { li.style.color = "#" + data.colour; }
         if (data.size) { li.setAttribute("data-size", data.size); }

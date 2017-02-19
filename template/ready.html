@@ -15,7 +15,7 @@
      */
     onReady = function(event) {
         var init, modal;
-        init = parseInt(document.querySelector("[name='initiative']").value);
+        init = parseInt(mainEl.querySelector("[name='initiative']").value);
         if (isNaN(init)) {
             // TODO show validation.
             return;

@@ -80,7 +80,6 @@ ol.initiativeList {
         body[data-state="combat"][data-isDm] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
 
-
 td.ctrl-combatCell {
     padding: 0;
     position: relative;
@@ -116,6 +115,13 @@ td.ctrl-combatCell {
         font-family: sans-serif;
     }
 
+    td.ctrl-combatCell > .hasTurn {
+        border-color: gold;
+        border-width: 3px;
+        border-style: groove;
+        font-weight: bold;
+    }
+
 table.ctrl-combatMap {
     table-layout: fixed;
     border: solid 1px #000;
@@ -146,11 +152,11 @@ table.ctrl-combatMap {
     table.ctrl-combatMap td {
         border-style: dotted;
     }
-    
+
     table.ctrl-combatMap td:first-of-type {
         border-left-style: solid;
     }
-    
+
     table.ctrl-combatMap tr:nth-child(2) > td{
         border-top-style: solid;
     }
@@ -159,6 +165,20 @@ ul.ctrl-colourOption {
     padding-left: 0;
     list-style-type: none;
 }
+
+.ctrl-speedOptions {}
+
+    .ctrl-speedOptions label {
+        display: inline-block;
+    }
+        .ctrl-speedOptions label h6,
+        .ctrl-speedOptions label span {
+            display: block;
+        }
+
+    .ctrl-speedOptions input[type='radio'] {
+        display: none;
+    }
 
 
 .ctrl-colourOption > input[type='radio'] {
@@ -222,5 +242,16 @@ ul.ctrl-colourOption {
     top: 200px;
 }
 
-button[name='done'] { display: none; }
-body[data-isMyTurn] button[name='done'] { display: inline-block; }
+body[data-state='combat']:not([data-isMyTurn]) #controls > * { display: none; }
+
+#turn > .turnHeading {
+    opacity: 0;
+}
+#turn > .turnHeading.updated {
+    -webkit-transition: opacity 2s ease-in;
+    -moz-transition: opacity 2s ease-in;
+    -o-transition: opacity 2s ease-in;
+    -ms-transition: opacity 2s ease-in;
+    transition: opacity 2s ease-in;
+    opacity: 1;
+}

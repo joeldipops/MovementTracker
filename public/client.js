@@ -1,4 +1,4 @@
-var DEFAULT,
+var DEFAULT, mainEl,
 onEvent, closePage, newPromise, wait, pageContext;
 
 DEFAULT = false;
@@ -120,7 +120,6 @@ var a = function() {
     };
 }();
 
-
 /**
  * Resolves the promise when all the the async work is resolved.
  * @param {Array of Promise} promises
@@ -223,7 +222,7 @@ var evaluateScripts = function(container) {
  * @returns {Promise} when complete.. 
  */
 var replaceBody = function(url, container, data, options) {
-   container = container || document.getElementById("main");
+   container = container || mainEl;
    url = data ? url + toQueryString(data) : url;
    url = "page/" + url;
    closePage();
@@ -262,21 +261,23 @@ function toQueryString(obj) {
 }
 
 function loadExternalScript(src) {
-    var script, main;
+    var script;
     script = document.createElement("script");
     script.setAttribute("type", "application/javascript");
     script.setAttribute("src", src);
-    main = document.getElementById("main");
-    main.insertBefore(script, main.firstChild);
+    mainEl.insertBefore(script, mainEl.firstChild);
 };
 
 // Sets up a websocket connection with the server.
 var socketControl = function(socketAddress) {
-    var socket, onSendMessage, onReceiveMessage;
+    var socket, sendMessage, onReceiveMessage;
     socket = new WebSocket(socketAddress, "echo-protocol");
     
-    onSendMessage = function() {
-        var text = document.querySelector("[name='message']").value
+    /**
+     * Send any message back up to the server.
+     * @param {string} text The text of the message.
+     */
+    sendMessage = function(text) {
         socket.send(text);
     };
 
@@ -297,3 +298,7 @@ var socketControl = function(socketAddress) {
     socket.addEventListener("message", onReceiveMessage);
     window.socket = socket;
 }(window.location.origin.replace(/https?/, "ws").replace(/\/$/, ""));
+
+wait(function() {
+    return mainEl = document.getElementById("main");
+});
