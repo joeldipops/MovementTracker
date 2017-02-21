@@ -1,15 +1,11 @@
-<section>
-    <h2>Ready Players</h2>
-    <div>Waiting for DM</div>
-    <ol class="initiativeList"></ol>
-</section>
+<div>Waiting for DM</div>
+<ol class="initiativeList"></ol>
 <script id="template-initiativeListItem" type="text/html">
 <li class="mob" data-id="" data-mobType="" data-initiative="" data-speed="">
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
-    <span class="usedReaction">No</span>
-    <button name="position">loc</span>
-    <button name="react">react</button>
+    <button name="position">@</button>
+    <button name="react">&#x26A0;</button>
     <button name="toggleMob">x</button>
 </li>
 </script>
@@ -20,7 +16,7 @@ window.initiativeContext = {};
         addPlayer, removePlayer, addDM, removeDM, startNextTurn, getNext,
         _template, _listEl, _subscribers, _events, _orderIndex;
 
-    _listEl = document.querySelector("#social ol.initiativeList");
+    _listEl = document.querySelector("#social .initiativeList");
     _subscribers = {};
     _events = [];
     _orderIndex = 1;
@@ -121,7 +117,7 @@ window.initiativeContext = {};
      * @param {object} data describing dm.
      */
     addDM = function(data) {
-        var el = document.querySelector("#social > section > div");
+        var el = document.querySelector("#social > div");
         el.innerHTML = "DM is " + data.player_name;
     };
 
@@ -129,7 +125,7 @@ window.initiativeContext = {};
      * Reverts the dm display if they leave.
      */
     removeDM = function(data) {
-        var el = document.querySelector("#social > section > div");
+        var el = document.querySelector("#social > div");
         el.innerHTML = "Waiting for DM";
     };
 
@@ -189,7 +185,7 @@ window.initiativeContext = {};
         if (data.colour) { li.style.color = "#" + data.colour; }
         if (data.size) { li.setAttribute("data-size", data.size); }
         if (data.character_name) { li.querySelector(".mobName").innerHTML = data.character_name; }
-        if (window.playerId === data.id) {
+        if (isEqual(window.playerId, data.id)) {
             li.setAttribute("data-isMyPc", "isMyPc");
         } else {
             li.removeAttribute("data-isMyPc");

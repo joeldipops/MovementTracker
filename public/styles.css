@@ -2,10 +2,44 @@
 :focus {outline:none;}
 ::-moz-focus-inner {border:0;}
 
+input[type='number'] {
+    width: 3rem;
+    text-align: center;
+    font-size: 2rem;
+    display: inline-block;
+    height: 3rem;
+}
+
+    input[type=number]::-webkit-inner-spin-button,
+    input[type=number]::-webkit-outer-spin-button {
+        -webkit-appearance: none; 
+        margin: 0;
+    }
+
+.ctrl-labelledNumber {
+    position: relative;
+    display: inline-block;
+}
+.ctrl-labelledNumber > input {
+    font-size: x-large;
+}
+.ctrl-labelledNumber > label {
+    width: 3rem;
+    left: 0;
+    position: absolute;
+    top: 2px;
+    text-align: center;
+    font-size: small;
+    font-weight: bold;
+    padding: 0 3px;
+}
+
 /** Main Layout **/
 body {
     display: table;
     width: 100%;
+    font-family: sans-serif;
+    margin: 10px;
 }
     body > * {
         display : table-cell;
@@ -17,7 +51,7 @@ body {
     
     body > aside > * {
         display: table-row;
-        height: 300px;
+        height: 200px;
     }
     
     body > aside > * > section {
@@ -26,58 +60,181 @@ body {
         padding-right: 10px;
     }
 
-
-
-ol.initiativeList {
-    list-style-type: none;
-    padding-top: 10px;
-    padding-left: 0;
+.ctrl-column {
+    display: inline-block;
 }
 
-    body[data-state='lobby'] ol.initiativeList > li {}
-        body[data-state='lobby'] ol.initiativeList > li > .initiativeScore { display: none; }
-        body[data-state='lobby'] ol.initiativeList > li > .usedReaction { display: none; }
-        body[data-state='lobby'] ol.initiativeList > li > [name='react'] { display: none; }
-        body[data-state='lobby'] ol.initiativeList > li > [name='position'] { display: none; }
-        body[data-state='lobby'] ol.initiativeList > li > [name='toggleMob'] { display: none; }
-        
-    body[data-state='setup'] ol.initiativeList > li {}
-        body[data-state='setup'] ol.initiativeList > li > .initiativeScore { display: none; }
-        body[data-state='setup'] ol.initiativeList > li > .usedReaction { display: none; }
-        body[data-state='setup'] ol.initiativeList > li > [name='react'] { display: none; }
-        body[data-state='setup'] ol.initiativeList > li > [name='position'] { display: inline-block; }
-        body[data-state='setup'] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
+.ctrl-coordinate {
+    text-align: center;
+}
 
-    body[data-state="combat"] ol.initiativeList > li.currentTurn {
-        font-weight: bold;
-        border: 2px solid red;
+.ctrl-coordinate > span {
+    vertical-align: text-bottom;
+}
+
+/**
+<div class="ctrl-tabSet">
+    <input type="radio" id="tab1" />
+    <label for="tab1">Tab1</label>
+    <section>Tab1 Content</section>
+    <input type="radio" id="tab2" />
+    <label for="tab2">Tab2</label>
+    <section>Tab2 Content</section>
+</div class="ctrl-tabSet">
+*/
+.ctrl-tabSet {
+    position: relative;
+}
+
+* + .ctrl-tabSet {
+    margin-top: 10px;
+}
+
+    .ctrl-tabSet > label {
+        display: inline-block;
+        border: 1px solid black;
+        border-top-left-radius: 5px;
+        border-top-right-radius: 5px;
+        text-align: center;
+        height: 25px;
+        width: auto;
+        background-color: #BBBBBB;
+        margin: 0;
+        margin-left: -2px;
+        margin-right: -2px;
+        padding: 5px;
+        padding-bottom: 1px;
+        box-sizing: border-box;
     }
-        body[data-state="combat"] ol.initiativeList > li.currentTurn::before {
+
+    .ctrl-tabSet[data-tabs='2'] > label {
+        width: 50%;
+    }
+
+    .ctrl-tabSet[data-tabs='3'] > label {
+        width: 33%;
+    }
+
+    .ctrl-tabSet[data-tabs='4'] > label {
+        width: 25%;
+    }
+
+    .ctrl-tabSet > fieldset { border: none; }
+    .ctrl-tabSet > fieldset > legend { display: none; }
+
+    .ctrl-tabSet > input[type='radio'] { display: none; }
+
+    .ctrl-tabSet > input[type='radio']:checked + label {
+        background-color: inherit;
+        font-weight: bold;
+        border-bottom-width: 0;
+    }
+    .ctrl-tabSet > input[type='radio']:not(:checked) + label + section,
+    .ctrl-tabSet > input[type='radio']:not(:checked) + label + fieldset {
+            display: none;
+    }
+    .ctrl-tabSet > section,
+    .ctrl-tabSet > fieldset {
+        box-sizing: border-box;
+        position: absolute;
+        top: 20px;
+        width: 100%;
+        padding: 10px 5px;
+        margin: 0;
+    }
+
+.ctrl-toggle {
+    width: 100px;
+    margin: 3px;
+}
+    .ctrl-toggle input[type='checkbox'] {
+        float: right;
+        height: 1.4rem;
+    }
+
+    .ctrl-toggle label {
+        width: 100%;
+        display: block;
+        height: 1rem;
+        line-height: 1rem;
+        padding: 3px;
+        border: 2px dashed black;
+        border-radius: 5px;
+    }
+
+    .ctrl-toggle input[type='checkbox']:checked + label {
+        border-style: solid;
+    }
+
+.ctrl-thickButton {
+    display: inline-block;
+    height: 3rem;
+    width: 3rem;
+    line-height: 3rem;
+    margin-left: 1rem;
+    vertical-align: text-bottom;
+}
+
+.ctrl-flat {
+    display: block;
+    height: 2rem;
+    width: 100%;
+    margin: 1px;
+    text-align: center;
+}
+
+
+.initiativeList {
+    list-style-type: none;
+    padding: 5px;
+    padding-top: 10px;
+    padding-left: 5px;
+    height: 200px;
+    overflow-y: scroll;
+    background-color: bisque;
+    margin-top: 0;
+    margin-bottom: 0;
+    width: 240px;
+}
+
+    .initiativeList > li > .mobName {
+        display: inline-block;
+        width: 100px;
+        overflow-x: hidden;
+    }
+    .initiativeList > li > * {
+        vertical-align: middle;
+    }
+    .initiativeList > li > .initiativeScore { display: none; }
+    .initiativeList > li > [name='react'] { display: none; }
+    .initiativeList > li > [name='position'] { display: none; }
+    .initiativeList > li > [name='toggleMob'] { display: none; }
+
+    body[data-state='setup'] .initiativeList > li {}
+        body[data-state='setup'] .initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state='setup'] .initiativeList > li > [name='toggleMob'] { display: inline-block; }
+
+    body[data-state="combat"] .initiativeList > li {}
+        body[data-state="combat"] .initiativeList > li.currentTurn {
+            font-weight: bold;
+            border: 2px solid red;
+        }
+        body[data-state="combat"] .initiativeList > li.currentTurn::before {
             content: ">";
             margin-left: -1rem;
             position: absolute;
             font-weight: bold;
         }
 
-        body[data-state="combat"] ol.initiativeList > li > .initiativeScore { display: inline; }
-        body[data-state="combat"] ol.initiativeList > li > .usedReaction { display: inline-block; }
-        body[data-state='combat'] ol.initiativeList > li > [name='react'] { display: none; }
-        body[data-state="combat"] ol.initiativeList > li > [name='position'] { display: none; }
-        body[data-state="combat"] ol.initiativeList > li > [name='toggleMob'] { display: none; }
+        body[data-state="combat"] .initiativeList > li > .initiativeScore { display: inline; }
+        body[data-state="combat"] .initiativeList > li[data-isMyPc] > [name='toggleMob'] { display: inline-block; }
 
-        body[data-state="combat"] ol.initiativeList > li[data-isMyPc] > [name='toggleMob'] { display: inline-block; }
-        body[data-state="combat"] ol.initiativeList > li[data-isMyPc]:not([data-reacted]) > [name='react'] {
-            display: inline-block; 
-        }
-
-    body[data-state="combat"][data-isDm] ol.initiativeList > li {}
-        body[data-state="combat"][data-isDm] ol.initiativeList > li > .initiativeScore { display: inline; }
-        body[data-state="combat"][data-isDm] ol.initiativeList > li > .usedReaction { display: inline-block; }
-        body[data-state="combat"][data-isDm] ol.initiativeList > li[data-mobType='npc']:not([data-reacted]) > [name='react'] {
+        body[data-state="combat"] .initiativeList > li[data-isMyPc]:not([data-reacted]) > [name='react'],
+        body[data-state="combat"][data-isDm] .initiativeList > li[data-mobType='npc']:not([data-reacted]) > [name='react'] {
             display: inline-block;
         }
-        body[data-state="combat"][data-isDm] ol.initiativeList > li > [name='position'] { display: inline-block; }
-        body[data-state="combat"][data-isDm] ol.initiativeList > li > [name='toggleMob'] { display: inline-block; }
+        body[data-state="combat"][data-isDm] .initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state="combat"][data-isDm] .initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
 
 td.ctrl-combatCell {
@@ -111,7 +268,6 @@ td.ctrl-combatCell {
         border-width: 1px;
 
         font-size: small;
-        font-family: sans-serif;
     }
 
     td.ctrl-combatCell > .hasTurn {
@@ -134,6 +290,7 @@ table.ctrl-combatMap {
     border: solid 1px #000;
     border-width: 0 1px 1px 0;
     border-spacing: 0;
+    touch-action: pan-y;
 }
     table.ctrl-combatMap th,
     table.ctrl-combatMap td {
@@ -143,6 +300,17 @@ table.ctrl-combatMap {
         text-align: center;
         border-width: 1px 0 0 1px;
         border-color: black;
+    }
+
+    @media only screen and (-webkit-min-device-pixel-ratio: 1.5),
+    only screen and (min--moz-device-pixel-ratio: 1.5),
+    only screen and (-o-device-pixel-ratio: 3/2),
+    only screen and (min-device-pixel-ratio: 1.5) {
+        table.ctrl-combatMap th,
+        table.ctrl-combatMap td {
+            width: 35px;
+            height: 35px;
+        }
     }
 
     table.ctrl-combatMap th {
@@ -173,18 +341,44 @@ ul.ctrl-colourOption {
     list-style-type: none;
 }
 
-.ctrl-speedOptions {}
+.ctrl-speedOptions {
+}
+
+    .ctrl-speedOptions > * {
+        text-align: center;
+    }
+
+    .ctrl-speedOptions input[type='radio'] {
+        display: none;
+    }
 
     .ctrl-speedOptions label {
         display: inline-block;
+        width: 3rem;
+        height: 3rem;
+        line-height: 0;
+        border: 2px outset black;
     }
+
         .ctrl-speedOptions label h6,
         .ctrl-speedOptions label span {
             display: block;
         }
 
-    .ctrl-speedOptions input[type='radio'] {
-        display: none;
+        .ctrl-speedOptions label h6 {
+            line-height: 1rem;
+            margin: 0;
+        }
+
+        .ctrl-speedOptions label span {
+            line-height: 30px;
+            margin-bottom: 1rem;
+            font-size: xx-large;
+        }
+
+    .ctrl-speedOptions input[type='radio']:checked + label {
+        border-width: 2px;
+        border-style: inset;
     }
 
 
@@ -261,4 +455,21 @@ body[data-state='combat']:not([data-isMyTurn]) #controls > * { display: none; }
     -ms-transition: opacity 2s ease-in;
     transition: opacity 2s ease-in;
     opacity: 1;
+}
+
+#social {
+    background-color: bisque;
+    margin-bottom: 10px;
+    margin-left: 0;
+    padding-left: 0;
+}
+
+#social > div {
+    padding-top: 5px;
+    text-align: center;
+}
+
+#controls {
+    padding-top: 10px;
+    padding: 5px;
 }

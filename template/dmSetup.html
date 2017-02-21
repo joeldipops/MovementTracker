@@ -4,53 +4,63 @@
     </table>
 </article>
 <script id="template-controls" type="text/html">
-<fieldset id="mapOptions">
-    <legend>Set Map</legend>
-    <label for="mapWidth">Width</label>
-    <input id="mapWidth" type="number" name="mapWidth" value="12" />
-    <label for="mapHeight">Height</label>
-    <input id="mapHeight" type="number" name="mapHeight" value="12" />
-    <button name="generateMap">Resize</button>
-</fieldset>
-<fieldset id="mobOptions">
-    <legend>Add NPC</legend>
-    <ul class="ctrl-colourOption">
-        <li>
-            <button name="addNpc">+</button>
-            <div>
-                <label for="npcName">Name</label>
-                <input type="text" id="npcName" name="npcName" />
+    <button class="ctrl-flat" name="start">Start</button>
+    <button class="ctrl-flat" name="clear">Clear</button>
+    <button class="ctrl-flat" name="reset">Quit</button>
+    <div class="ctrl-tabSet" data-tabs="3">
+        <input type="radio" name="controlTab" id="mapControlsTab" checked />
+        <label for="mapControlsTab">MAP</label>
+        <fieldset id="mapOptions">
+            <legend></legend>
+            <div class="ctrl-coordinate">
+                <input id="mapWidth" type="number" name="mapWidth" value="12" placeholder="width" />
+                <span>x</span>
+                <input id="mapHeight" type="number" name="mapHeight" value="12" placeholder="height" />
             </div>
+        </fieldset>
+
+        <input type="radio" name="controlTab" id="mobControlsTab" />
+        <label for="mobControlsTab">MOB</label>
+        <fieldset id="mobOptions">
+            <legend></legend>
             <div>
-                <label for="npcInitiative">Initiative</label>
-                <input type="number" id="npcInitiative" name="npcInitiative" value="10" />
+                <input class="ctrl-flat" type="text" id="npcName" name="npcName" placeholder="NAME" />
             </div>
+            <div class="ctrl-labelledNumber">
+                <label for="npcInitiative">INIT</label>
+                <input type="number" id="npcInitiative" name="npcInitiative" placeholder="0" />
+            </div>
+            <label for="npcSize">SIZE</label>
+            <select id="npcSize" name="npcSize"></select>
             <div>
-                <label for="npcSpeed">Walk Speed</label>
-                <input type="number" id="npcSpeed" name="npcSpeed" value="30" />
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="npcSpeed" name="npcSpeed" placeholder="30" />
+                    <label class="number" for="npcSpeed">WALK</label>
+                </div>
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="0" />
+                    <label class="number" for="npcSpeed-swim">SWIM</label>
+                </div>
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="npcSpeed-fly" name="npcSpeed-fly" placeholder="0" />
+                    <label class="number" for="npcSpeed-fly">FLY</label>
+                </div>
             </div>
-            <div>
-                <label for="npcSize">Size</label>
-                <select id="npcSize" name="npcSize"></select>
+            <button class="ctrl-flat" name="addNpc">ADD</button>
+        </fieldset>
+
+        <input type="radio" name="controlTab" id="terrainControlsTab" />
+        <label for="terrainControlsTab">TERRAIN</label>
+        <fieldset id="terrainOptions">
+            <legend></legend>
+            <div class="ctrl-coordinate">
+                <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+                <span>x</span>
+                <input type="number" id="terrainLength" name="terrainLength" value="1" />
             </div>
-        </li>
-    </ul>
-</fieldset>
-<fieldset id="terrainOptions">
-    <legend>Add Terrain</legend>
-    <ul class="ctrl-colourOption" name="terrainTypes"></ul>
-    <div>
-        <label for="terrainWidth">Width</label>
-        <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+            <ul class="ctrl-colourOption" name="terrainTypes"></ul>
+        </fieldset>
     </div>
-    <div>
-        <label for="terrainLength">Length</label>
-        <input type="number" id="terrainLength" name="terrainLength" value="1" />
-    </div>
-</fieldset>
-<strong><button name="start">Start</button></strong>
-<button name="clear">Reset Map</button>
-<button name="reset">Reset Entire Session</button>
 </script>
 <script id="template-terrainType" type="text/html">
     <li>
@@ -262,19 +272,21 @@ loadExternalScript("public/combatMap.js");
         onEvent("button[name='addNpc']", "click", function() {
             var name, init, size;
             name = document.querySelector("[name='npcName']").value;
-            init = parseInt(document.querySelector("[name='npcInitiative']").value);
-            
             // Can't add NPC if missing info.
-            if (!name || isNaN(init)) {
+            if (!name) {
                 return;
             }
+
+            init = parseInt(document.querySelector("[name='npcInitiative']").value) || 0;
 
             data = {
                 character_name : name,
                 initiative : init,
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {
-                    walk : document.querySelector("[name='npcSpeed']").value
+                    walk : parseInt(document.querySelector("[name='npcSpeed']").value) || 30,
+                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 0,
+                    fly: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0
                 },
                 id : (new Date()).valueOf().toString()
             };
@@ -306,7 +318,8 @@ loadExternalScript("public/combatMap.js");
             pageContext.onMapEvent("td > button", "click", addTerrain);
         });
 
-        onEvent("button[name='generateMap']", "click", generateMap);
+        onEvent("[name='mapWidth']", "change", generateMap);
+        onEvent("[name='mapHeight']", "change", generateMap);
 
         onEvent("button[name='clear']", "click", clear);
 

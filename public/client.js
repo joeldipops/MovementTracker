@@ -156,6 +156,21 @@ var runAsync = function(promises) {
 };
 
 /**
+ * Checks that two ids that may be either ids or strings are equal.
+ * @param {number|string} id1
+ * @param {number|string} id2
+ * @returns {boolean} true if same id.
+ */
+var isEqual = function(id1, id2) {
+    if (isNaN(id1 && id2)) {
+        return false;
+    }
+    id1 = (typeof id1 === "string") ? id1 : id1.toString();
+    id2 = (typeof id2 === "string") ? id2 : id2.toString();
+    return id1 === id2;
+};
+
+/**
  * Sends a http request and passes the results to a callback via promises.
  * @param {string} url The target of the request.
  * @param {string} method The HTTP method.

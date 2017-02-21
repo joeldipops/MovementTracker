@@ -1,5 +1,5 @@
 <article id="turn">
-    <h3 class="turnHeading">Hello World</h3>
+    <h1 class="turnHeading"></h1>
     <table id="map" class="ctrl-combatMap">
     </table>
 </article>
@@ -12,23 +12,33 @@ loadExternalScript("public/combatMap.js");
 </td>
 </script>
 <script id="template-movementOption" type="text/html">
-    <label for="movementType-{type}" data-base="{remaining}" data-remaining="{remaining}" data-used="0">
+    <input
+        id="movementType-{type}"
+        type="radio"
+        name="movementType"
+        value="{type}"
+        data-base="{remaining}"
+        data-remaining="{remaining}"
+        data-used="0"
+    />
+    <label for="movementType-{type}">
         <h6>{text}</h6>
         <span name="remaining">{remaining}</span>
-        <input id="movementType-{type}" type="radio" name="movementType" value="{type}" />
     </label>
 </script>
 <script id="template-controls" type="text/html">
     <div class="ctrl-speedOptions"></div>
-    <div>
-        <label for="dashAction">Use Dash Action</label>
-        <input if="dashAction" type="checkbox" name="dashAction" />
+    <div class="ctrl-column">
+        <div class="ctrl-toggle">
+            <input if="dashAction" type="checkbox" name="dashAction" />
+            <label for="dashAction">DASH</label>
+        </div>
+        <div class="ctrl-toggle">
+            <input id="dashBonus" type="checkbox" name="dashBonus" />
+            <label for="dashBonus">BONUS</label>
+        </div>
     </div>
-    <div>
-        <label for="dashBonus">Dash as Bonus Action</label>
-        <input id="dashBonus" type="checkbox" name="dashBonus" />
-    </div>
-    <button name="done">Done</button>
+    <button class="ctrl-thickButton" name="done">DONE</button>
 </script>
 <script type="application/javascript">
 (function combatScript() {
@@ -51,7 +61,7 @@ loadExternalScript("public/combatMap.js");
         window.initiativeContext.clearNpcs();
         for (k in data.mobs) {
             for (i = 0; i < data.mobs[k].length; i++) {
-                initiativeContext.addMob(data.mobs[k][i], true, data.mobs[k][i].id === turnMobId);
+                initiativeContext.addMob(data.mobs[k][i], true, isEqual(data.mobs[k][i].id, turnMobId));
             }
         }
     };
@@ -77,7 +87,7 @@ loadExternalScript("public/combatMap.js");
      */
     onDashChange = function() {
         var el, base, max;
-        el = _menuEl.querySelector("[for='movementType-walk']");
+        el = _menuEl.querySelector("#movementType-walk");
         base = parseInt(el.getAttribute("data-base"));
         used = parseInt(el.getAttribute("data-used"));
         total = base;
@@ -96,7 +106,7 @@ loadExternalScript("public/combatMap.js");
         }
 
         el.setAttribute("data-remaining", total);
-        el.querySelector("[name='remaining']").innerHTML = total;
+        el.parentNode.querySelector("[for='" + el.id + "'] [name='remaining']").innerHTML = total;
     };
 
     /**
@@ -132,7 +142,7 @@ loadExternalScript("public/combatMap.js");
             el.insertAdjacentHTML("beforeend", temp);
         }
         // Auto select walk.
-        el.firstElementChild.querySelector("[name='movementType'][value='walk']").checked = true;
+        el.querySelector("[name='movementType'][value='walk']").checked = true;
     }
 
     /**
@@ -154,7 +164,7 @@ loadExternalScript("public/combatMap.js");
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
             // DM's turn for NPCs
             onMyTurnStart(data);
-        } else if (data.id === window.playerId) {
+        } else if (isEqual(data.id, window.playerId)) {
             // Player's turn.
             onMyTurnStart(data);
         } else {
@@ -228,7 +238,7 @@ loadExternalScript("public/combatMap.js");
 
         if (isInRange(current, event.currentTarget, {
             type: speedEl.value,
-            remaining : speedEl.parentElement.getAttribute("data-remaining")
+            remaining : speedEl.getAttribute("data-remaining")
         })) {
             event.currentTarget.classList.add("reachable");
         } else {
@@ -258,11 +268,11 @@ loadExternalScript("public/combatMap.js");
                 event.currentTarget,
                 {
                     type: speedEl.value,
-                    remaining : parseInt(speedEl.parentElement.getAttribute("data-remaining"))
+                    remaining : parseInt(speedEl.getAttribute("data-remaining"))
                 }
             )) {
                 distance = moveMob(mob, event.currentTarget);
-                subtractMovement(distance, speedEl.parentElement);
+                subtractMovement(distance, speedEl);
             }
         }
     };
@@ -278,7 +288,7 @@ loadExternalScript("public/combatMap.js");
         remaining = parseInt(el.getAttribute("data-remaining")) - distance;
         remaining = remaining >= 0 ? remaining : 0;
         el.setAttribute("data-remaining", remaining);
-        el.querySelector("[name='remaining']").innerHTML = remaining;
+        el.parentNode.querySelector("[for='"+ el.id + "'] [name='remaining']").innerHTML = remaining;
     };
 
     /**

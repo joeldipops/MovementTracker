@@ -145,9 +145,9 @@
     };
 
     pageContext.movementTypes = {
-        walk : { text : "Walk", passableTerrain : ["normal, difficult, climbable"] },
-        swim: { text : "Swim", passableTerrain : ["swimable"] },
-        fly : { text : "Fly", passableTerrain : ["normal, difficult, climable, swimmable"] }
+        walk : { text : "WALK", passableTerrain : ["normal, difficult, climbable"] },
+        swim: { text : "SWIM", passableTerrain : ["swimable"] },
+        fly : { text : "FLY", passableTerrain : ["normal, difficult, climable, swimmable"] }
     };
 
     // Not authoritative sizes.
