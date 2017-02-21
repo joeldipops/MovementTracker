@@ -1,11 +1,14 @@
 var UNITS_PER_TILE, mainEl,
-onEvent, closePage, newPromise, wait, pageContext;
+    onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
+    sendHttpRequest, replaceBody, loadExternalScript,
+    pageContext;
 
 UNITS_PER_TILE = 5;
 pageContext = {};
 
 var a = function() {
-    var _pageEvents, _pendingPromises, _pendingTimeouts;
+    var _pageEvents, _pendingPromises, _pendingTimeouts,
+        evaluateScripts, toQueryString, socketControl, nativeParseInt;
     _pageEvents = [];
     _pendingCancelFlags = [];
     _pendingTimeouts = [];
@@ -86,8 +89,9 @@ var a = function() {
      * @param {number} r (optional) Just know it should be 10...
      * @returns {number} parsed value or NaN.
      */
-    var parseInt = function(value, r) {
-        return window.parseInt(value, r !== void 0 ? r : 10);
+    nativeParseInt = window.parseInt;
+    parseInt = function(value, r) {
+        return nativeParseInt(value, r !== void 0 ? r : 10);
     };
 
     /**
@@ -118,202 +122,207 @@ var a = function() {
         });
         return resultPromise;
     };
-}();
-
-/**
- * Resolves the promise when all the the async work is resolved.
- * @param {Array of Promise} promises
- * @returns {Promise} callback argument is an indexed list of the results that matches the order passed in.
- */
-var runAsync = function(promises) {
-    return newPromise(function(resolve, reject) {
-        var i, results, resolved;
-        resolved = 0;
-        results = {};
-
-        // If no promises, resolve immediately.
-        if (!promises.length) {
-            setTimeout(resolve, 0);
-            return;
-        }
-
-        for (i = 0; i < promises.length; i++) {
-            // When all promises have resolved, resolve the whole thing.
-            promises[i].then(function(index, result) {
-                resolved++;
-                results[index] = result;
-                if (resolved == promises.length) {
-                    resolve(results);
-                }
-            }.bind({},i))
-            // If any fail, fail the whole thing.
-                .catch(function(index, result) {
-                results[index] = result;
-                reject(results);
-            }.bind({},i));
-        }
-    });
-};
-
-/**
- * Checks that two ids that may be either ids or strings are equal.
- * @param {number|string} id1
- * @param {number|string} id2
- * @returns {boolean} true if same id.
- */
-var isEqual = function(id1, id2) {
-    if (isNaN(id1 && id2)) {
-        return false;
-    }
-    id1 = (typeof id1 === "string") ? id1 : id1.toString();
-    id2 = (typeof id2 === "string") ? id2 : id2.toString();
-    return id1 === id2;
-};
-
-/**
- * Sends a http request and passes the results to a callback via promises.
- * @param {string} url The target of the request.
- * @param {string} method The HTTP method.
- * @param {object} data to send with the request (only json supported atm}
- * @param {object} options to override default behaviour.
- * @returns {Promise} promise that resolves or rejects when request returns.
- */
-var sendHttpRequest = function(url, method, data, options) {
-    var request, type, promise,
-        onPromise, onHttpResponse;
-    options = options || {};
-
-    onPromise = function(resolve, reject) {
-        request = new XMLHttpRequest();
-        request.addEventListener("load", function() {
-            if (this.status  === 200) {
-                resolve(this);
-            } else {
-                reject(this);
-            }
-        });
-        if (data && (method === "GET" || method === "DELETE")) {
-            url += toQueryString(data);
-        }
-        request.open(method, url);
-        if (data && (method === "PUT" || method === "POST")) {
-            type = options.type || "application/json";
-            request.setRequestHeader("Content-Type", type);
-            data.session_id = window.sessionId;
-            data.socket_id = window.socketId;
-            data = JSON.stringify(data);
-            request.send(data);
-        } else {
-            request.send();
-        }
-    };
-
-    // Don't cancel promise on close.
-    if (options.isPersistent) {
-        return new Promise(onPromise);
-    } else {
-        return newPromise(onPromise);
-    }
-};
-
-/**
- * Executes all js script tags within a given element.
- * @param {HTMLElement} container the element.that may contain script tags.
- */
-var evaluateScripts = function(container) {
-    var scripts, i;
-    scripts = container.querySelectorAll("script[type='application/javascript']");
-    for (i = 0; i < scripts.length; i++) {
-        eval(scripts[i].innerHTML);
-    }
-}
-
-/**
- * Gets a html document from the server and sets it as containers contents.
- * @param {string} pageName name of the requested page/document.
- * @param {HTMLElement} container element to replace contents.  defaults to <body>
- * @param {object} data to send along with the call.
- * @param {options} data to affect how the call is made eg. HTTP method.
- * @returns {Promise} when complete.. 
- */
-var replaceBody = function(url, container, data, options) {
-   container = container || mainEl;
-   url = data ? url + toQueryString(data) : url;
-   url = "page/" + url;
-   closePage();
-   return sendHttpRequest(url, (options && options.method) || "GET")
-   .then(function(result) {
-       container.innerHTML = result.responseText;
-       evaluateScripts(container);
-   })
-   .catch(function(result) {
-       if (result) {
-           if (!result.responseText) {
-               console.error(JSON.stringify(result));
-           } else {
-               console.error(result.responseText);
-           }
-       } else {
-           console.trace();
-       }
-   });
-};
-
-/**
- * Converts a pojo to a url query string.
- * @param {object} The object.
- * @returns {string} The & seperated query string (including ?)
- */
-function toQueryString(obj) {
-    var parts, i;
-    parts = [];
-    for (i in obj) {
-        if (obj.hasOwnProperty(i)) {
-            parts.push(encodeURIComponent(i) + "=" + encodeURIComponent(obj[i]));
-        }
-    }
-    return "?" + parts.join("&");
-}
-
-function loadExternalScript(src) {
-    var script;
-    script = document.createElement("script");
-    script.setAttribute("type", "application/javascript");
-    script.setAttribute("src", src);
-    mainEl.insertBefore(script, mainEl.firstChild);
-};
-
-// Sets up a websocket connection with the server.
-var socketControl = function(socketAddress) {
-    var socket, sendMessage, onReceiveMessage;
-    socket = new WebSocket(socketAddress, "echo-protocol");
     
     /**
-     * Send any message back up to the server.
-     * @param {string} text The text of the message.
+     * Resolves the promise when all the the async work is resolved.
+     * @param {Array of Promise} promises
+     * @returns {Promise} callback argument is an indexed list of the results that matches the order passed in.
      */
-    sendMessage = function(text) {
-        socket.send(text);
+    runAsync = function(promises) {
+        return newPromise(function(resolve, reject) {
+            var i, results, resolved;
+            resolved = 0;
+            results = {};
+
+            // If no promises, resolve immediately.
+            if (!promises.length) {
+                setTimeout(resolve, 0);
+                return;
+            }
+
+            for (i = 0; i < promises.length; i++) {
+                // When all promises have resolved, resolve the whole thing.
+                promises[i].then(function(index, result) {
+                    resolved++;
+                    results[index] = result;
+                    if (resolved == promises.length) {
+                        resolve(results);
+                    }
+                }.bind({},i))
+                // If any fail, fail the whole thing.
+                .catch(function(index, result) {
+                    results[index] = result;
+                    reject(results);
+                }.bind({},i));
+            }
+        });
     };
 
     /**
-     * Handles messages received through the web socket.
+     * Checks that two ids that may be either ids or strings are equal.
+     * @param {number|string} id1
+     * @param {number|string} id2
+     * @returns {boolean} true if same id.
      */
-    onReceiveMessage = function(event) {
-        var data, el;
-        data = JSON.parse(event.data);
-        if (data["session_id"]) {
-            window.sessionId = data.session_id;
+    isEqual = function(id1, id2) {
+        if (isNaN(id1 && id2)) {
+            return false;
         }
-        if (!isNaN(data["socket_id"])) {
-            window.socketId = data.socket_id;
+        id1 = (typeof id1 === "string") ? id1 : id1.toString();
+        id2 = (typeof id2 === "string") ? id2 : id2.toString();
+        return id1 === id2;
+    };
+
+    /**
+     * Sends a http request and passes the results to a callback via promises.
+     * @param {string} url The target of the request.
+     * @param {string} method The HTTP method.
+     * @param {object} data to send with the request (only json supported atm}
+     * @param {object} options to override default behaviour.
+     * @returns {Promise} promise that resolves or rejects when request returns.
+     */
+    sendHttpRequest = function(url, method, data, options) {
+        var request, type, promise,
+            onPromise, onHttpResponse;
+        options = options || {};
+
+        onPromise = function(resolve, reject) {
+            request = new XMLHttpRequest();
+            request.addEventListener("load", function() {
+                if (this.status  === 200) {
+                    resolve(this);
+                } else {
+                    reject(this);
+                }
+            });
+            if (data && (method === "GET" || method === "DELETE")) {
+                url += toQueryString(data);
+            }
+            request.open(method, url);
+            if (data && (method === "PUT" || method === "POST")) {
+                type = options.type || "application/json";
+                request.setRequestHeader("Content-Type", type);
+                data.session_id = window.sessionId;
+                data.socket_id = window.socketId;
+                data = JSON.stringify(data);
+                request.send(data);
+            } else {
+                request.send();
+            }
+        };
+
+        // Don't cancel promise on close.
+        if (options.isPersistent) {
+            return new Promise(onPromise);
+        } else {
+            return newPromise(onPromise);
         }
     };
 
-    socket.addEventListener("message", onReceiveMessage);
-    window.socket = socket;
-}(window.location.origin.replace(/https?/, "ws").replace(/\/$/, ""));
+    /**
+     * Executes all js script tags within a given element.
+     * @param {HTMLElement} container the element.that may contain script tags.
+     */
+    evaluateScripts = function(container) {
+        var scripts, i;
+        scripts = container.querySelectorAll("script[type='application/javascript']");
+        for (i = 0; i < scripts.length; i++) {
+            eval(scripts[i].innerHTML);
+        }
+    }
 
-wait(function() {
-    return mainEl = document.getElementById("main");
-});
+    /**
+     * Gets a html document from the server and sets it as containers contents.
+     * @param {string} pageName name of the requested page/document.
+     * @param {HTMLElement} container element to replace contents.  defaults to <body>
+     * @param {object} data to send along with the call.
+     * @param {options} data to affect how the call is made eg. HTTP method.
+     * @returns {Promise} when complete..
+     */
+    replaceBody = function(url, container, data, options) {
+        container = container || mainEl;
+        url = data ? url + toQueryString(data) : url;
+        url = "page/" + url;
+        closePage();
+        return sendHttpRequest(url, (options && options.method) || "GET")
+        .then(function(result) {
+            container.innerHTML = result.responseText;
+            evaluateScripts(container);
+        })
+        .catch(function(result) {
+            if (result) {
+                if (!result.responseText) {
+                    console.error(result.toString());
+                    console.error(JSON.stringify(result));
+                } else {
+                    console.error(result.responseText);
+                }
+            } else {
+                console.trace();
+            }
+        });
+    };
+
+    /**
+     * Converts a pojo to a url query string.
+     * @param {object} The object.
+     * @returns {string} The & seperated query string (including ?)
+     */
+    toQueryString = function(obj) {
+        var parts, i;
+        parts = [];
+        for (i in obj) {
+            if (obj.hasOwnProperty(i)) {
+                parts.push(encodeURIComponent(i) + "=" + encodeURIComponent(obj[i]));
+            }
+        }
+        return "?" + parts.join("&");
+    };
+
+    /**
+     * Dynamically loads a script at the given url.
+     * @param {string} src The url of the script.
+     */
+    loadExternalScript = function(src) {
+        var script;
+        script = document.createElement("script");
+        script.setAttribute("type", "application/javascript");
+        script.setAttribute("src", src);
+        mainEl.insertBefore(script, mainEl.firstChild);
+    };
+
+    // Sets up a websocket connection with the server.
+    socketControl = function(socketAddress) {
+        var socket, sendMessage, onReceiveMessage;
+        socket = new WebSocket(socketAddress, "echo-protocol");
+
+        /**
+         * Send any message back up to the server.
+         * @param {string} text The text of the message.
+         */
+        sendMessage = function(text) {
+            socket.send(text);
+        };
+
+        /**
+         * Handles messages received through the web socket.
+         */
+        onReceiveMessage = function(event) {
+            var data, el;
+            data = JSON.parse(event.data);
+            if (data["session_id"]) {
+                window.sessionId = data.session_id;
+            }
+            if (!isNaN(data["socket_id"])) {
+                window.socketId = data.socket_id;
+            }
+        };
+
+        socket.addEventListener("message", onReceiveMessage);
+        window.socket = socket;
+    }(window.location.origin.replace(/https?/, "ws").replace(/\/$/, ""));
+
+    wait(function() {
+        return mainEl = document.getElementById("main");
+    });
+}();
