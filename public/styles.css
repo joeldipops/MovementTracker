@@ -211,7 +211,8 @@ body {
         vertical-align: middle;
     }
     .initiativeList > li > .initiativeScore { display: none; }
-    .initiativeList > li > [name='react'] { display: none; }
+    /* TODO Implement reactions & remove !important directive. */
+    .initiativeList > li > [name='react'] { display: none !important; }
     .initiativeList > li > [name='position'] { display: none; }
     .initiativeList > li > [name='toggleMob'] { display: none; }
 
@@ -224,15 +225,11 @@ body {
             font-weight: bold;
             border: 2px solid red;
         }
-        body[data-state="combat"] .initiativeList > li.currentTurn::before {
-            content: ">";
-            margin-left: -1rem;
-            position: absolute;
-            font-weight: bold;
-        }
 
         body[data-state="combat"] .initiativeList > li > .initiativeScore { display: inline; }
+        /** TODO Implement toggling for players and re-enable
         body[data-state="combat"] .initiativeList > li[data-isMyPc] > [name='toggleMob'] { display: inline-block; }
+         */
 
         body[data-state="combat"] .initiativeList > li[data-isMyPc]:not([data-reacted]) > [name='react'],
         body[data-state="combat"][data-isDm] .initiativeList > li[data-mobType='npc']:not([data-reacted]) > [name='react'] {
@@ -276,10 +273,18 @@ td.ctrl-combatCell {
     }
 
     td.ctrl-combatCell > .hasTurn {
+        font-weight: bold;
+    }
+    td.ctrl-combatCell > .hasTurn::before {
+        position: absolute;
+        left: -10px;
+        content: ">";
+    }
+
+    td.ctrl-combatCell > .isMyPc {
         border-color: gold;
         border-width: 3px;
         border-style: groove;
-        font-weight: bold;
     }
 
     td.ctrl-combatCell > .terrain.reachable:hover {
@@ -295,7 +300,7 @@ table.ctrl-combatMap {
     border: solid 1px #000;
     border-width: 0 1px 1px 0;
     border-spacing: 0;
-    touch-action: pan-y;
+    touch-action: pan-y pan-x;
 }
     table.ctrl-combatMap th,
     table.ctrl-combatMap td {

@@ -240,10 +240,17 @@ var a = function() {
      * @returns {Promise} when complete..
      */
     replaceBody = function(url, container, data, options) {
+        var menuEl;
         container = container || mainEl;
         url = data ? url + toQueryString(data) : url;
         url = "page/" + url;
         closePage();
+        if (!options || !options.leaveMenu) {
+            menuEl = document.getElementById("controls");
+            while(menuEl.firstElementChild) {
+                menuEl.removeChild(menuEl.firstElementChild);
+            }
+        }
         return sendHttpRequest(url, (options && options.method) || "GET")
         .then(function(result) {
             container.innerHTML = result.responseText;

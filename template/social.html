@@ -71,6 +71,8 @@ window.initiativeContext = {};
             data.colour = li.style.color;
             data.character_name = li.querySelector(".mobName").innerHTML;
             data.initiative = parseInt(li.getAttribute("data-initiative"));
+            data.potential = parseInt(li.getAttribute("data-potential"));
+
             data.order = parseInt(li.getAttribute("data-order"));
             data.speed = {
                 walk : parseInt(li.getAttribute("data-speed"))
@@ -110,6 +112,10 @@ window.initiativeContext = {};
         if (data["turn_start"]) {
             startNextTurn(data["turn_start"]);
         }
+        if (data["session_end"]) {
+            // Kaboom
+            window.location.reload();
+        }
     };
 
     /**
@@ -130,13 +136,24 @@ window.initiativeContext = {};
     };
 
     /**
-     * Removes a mob from the list.
+     * Removes a mob from the li     st.
      * @param {object} data describes the mob.
      */
     removePlayer = function(data) {
         var li, id;
         id = isNaN(data.player_id) ? data.id : data.player_id;
-        if (li = _listEl.querySelector("li[data-id='" + id + "']")) {
+        li = _listEl.querySelector("li[data-id='" + id + "']");
+        if (!li) {
+            return;
+        }
+        if (data.from_combat && document.body.hasAttribute("data-isDm")) {
+            // DM will keep players in list unless forced.
+            // But should still ignore them when calculating next player.
+            if (li.hasAttribute("data-initiative")) {
+                li.setAttribute("data-potential", li.getAttribute("data-initiative"));
+                li.removeAttribute("data-initiative");
+            }
+        } else {
             li.parentElement.removeChild(li);
         }
     };
@@ -285,7 +302,7 @@ window.initiativeContext = {};
     getNext = function() {
         // TODO: 0HP mobs.
         var el;
-        if(!(el = _listEl.querySelector(".currentTurn + li"))) {
+        if(!(el = _listEl.querySelector(".currentTurn ~ [data-initiative]"))) {
             // Will select the first that actually has init.
             el = _listEl.querySelector("[data-initiative]");
         }
@@ -318,7 +335,11 @@ window.initiativeContext = {};
      * @returns {string} id of the mob who is next.
      */
     window.initiativeContext.getNext = function() {
-        return getNext().getAttribute("data-id");
+        var next;
+        if (next = getNext()) {
+            return next.getAttribute("data-id");
+        }
+        return null;
     };
 
     /**

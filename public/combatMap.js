@@ -6,6 +6,19 @@
     _mobs = {};
     _mobIndex = {};
 
+    // Prevent annoying zooming
+    onEvent(_mapEl, "touchstart", function() {
+        var el = document.head.querySelector("meta[name='viewport']");
+        el.setAttribute("content", "user-scalable=0");
+    });
+    
+    onEvent(_mapEl, "touchend", function() {
+        setTimeout(function() {
+            var el = document.head.querySelector("meta[name='viewport']");
+            el.setAttribute("content", "user-scalable=1");
+        }, 2000);
+    });
+
     /**
      * Compares mobs by id..
      * @param {object} first mob to compare.
@@ -169,7 +182,7 @@
      */
     pageContext.getMob = function(x, y) {
         if (_mobs[x]) {
-            return _mobs[x][y];
+            return _mobs[x][y] || [];
         }
         return [];
     };
@@ -219,6 +232,9 @@
 
         el = document.createElement("div");
         el.classList.add("mob");
+        if (isEqual(data.id, window.playerId)) {
+            el.classList.add("isMyPc");
+        }
         el.setAttribute("data-id", data.id);
         el.setAttribute("title", data.character_name);
         el.innerHTML = (data.character_name || "?")[0];

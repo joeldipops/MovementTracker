@@ -25,6 +25,7 @@ server.get("/page/ready", getReadyPage);
 server.get("/page/dm_console", getDmConsolePage);
 server.put(/session\/[0-9]+\/player\/[0-9]+\/ready/, readyPlayer);
 server.put(/session\/[0-9]+\/player\/[0-9]+\/move/, movePlayer);
+server.put(/session\/[0-9]+\/player\/[0-9]+\/remove/, removePlayerFromCombat);
 server.post(/session\/[0-9]+\/player\/[0-9]+\/react/, useReaction);
 server.put(/session\/[0-9]+\/player(\/[0-9]+)?/, putPlayer);
 server.put(/session\/[0-9]+\/turn\/[0-9]+/, broadcastTurn);
@@ -34,6 +35,8 @@ server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
 server.get(/session\/[0-9]+\/map/, downloadMap);
 server.put(/session\/[0-9]+\/map/, uploadMap);
+server.del(/session\/[0-9]+\/map/, resetMap);
+
 server.get(/session(\/[0-9]+)?$/, getSession);
 server.del(/session\/[0-9]+/,deleteSession);
 
@@ -73,6 +76,18 @@ function uploadMap(req, res) {
     res.writeHead(200);
     res.end();
 };
+
+/**
+ * Removes the current map and forces everyone back to the "ready" screen.
+ */
+function resetMap(req, res) {
+    var sessionId;
+    sessionId = getEntityId("session", req);
+    socketServerControl.clear(`map-${sessionId}`);
+    socketServerControl.broadcastJSON({ combat_end : true });
+    res.writeHead(200);
+    res.end();
+}
 
 /**
  * Downloads the latest map.
@@ -144,6 +159,7 @@ function putPlayer(req, res) {
         }
         player = socketServerControl.cache(req.body.socket_id, {
             player_id : result.rows[0].playerid,
+            id : result.rows[0].playerid,
             socket_id : req.body.socket_id,
             player_type : req.body.player_type,
             colour: req.body.colour,
@@ -210,6 +226,18 @@ function movePlayer(req, res) {
     res.end();
 };
 
+function removePlayerFromCombat(req, res) {
+    var id = getEntityId("player", req);
+    socketServerControl.broadcastJSON({
+        "player_remove" : {
+            id : id,
+            from_combat: true
+        }
+    });
+    res.writeHead(200);
+    res.end();
+}
+
 function getSession(req, res) {
     db.runQuery(queries.getCurrentSession, null, function(result) {
         if (!result) {
@@ -232,6 +260,8 @@ function deleteSession(req, res) {
     var path, sessionId;
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
+    socketServerControl.broadcastJSON({"session_end" : true});
+    socketServerControl.blowUpCache();
     db.runQuery(queries.deleteSession, [sessionId], function(result) {
         if (!result) {
             return serveError(res);

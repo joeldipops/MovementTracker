@@ -249,9 +249,11 @@ loadExternalScript("public/combatMap.js");
      * Determines who has the next turn and broadcasts to everyone.
      */
     triggerNextTurn = function() {
-        var id = initiativeContext.getNext();
-        sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
-        pageContext.removeMapEvents();
+        var id;
+        if (id = initiativeContext.getNext()) {
+            sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
+            pageContext.removeMapEvents();
+        }
     };
 
     /**
@@ -382,6 +384,7 @@ loadExternalScript("public/combatMap.js");
                 subtractMovement(distance, speedEl);
             }
         }
+        event.preventDefault();
     };
 
     /**
@@ -466,8 +469,18 @@ loadExternalScript("public/combatMap.js");
             updateMap(data["map_update"]);
         }
         if (data["player_move"]) {
-            debugger;
             onPlayerMove(data["player_move"]);
+        }
+
+        if (data["player_remove"]) {
+            pageContext.removeMob(data["player_remove"]);
+        }
+
+        // ignored by dm
+        if (!document.body.hasAttribute("data-isDm")) {
+            if (data["combat_end"]) {
+                replaceBody("ready");
+            }
         }
     };
     onEvent(window.socket, "message", onReceiveMessage);
@@ -516,7 +529,7 @@ loadExternalScript("public/combatMap.js");
     /**
      * Resets the map to a blank slate.
      */
-    clear = function() {
+    clear = function(isSilent) {
         var map;
         pageContext.removeMapEvents();
         map = document.getElementById("map");
@@ -524,6 +537,10 @@ loadExternalScript("public/combatMap.js");
         map.removeAttribute("data-height");
         while(map.firstChild) {
             map.removeChild(map.firstChild);
+        }
+        if (!isSilent) {
+            sendHttpRequest("session/" + window.sessionId + "/map", "DELETE");
+            replaceBody("dm_console");
         }
     };
 
@@ -533,7 +550,7 @@ loadExternalScript("public/combatMap.js");
     start = function() {
         var requestBody;
         requestBody = pageContext.mapToJSON();
-        sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
+        sendHttpRequest("session/" + window.sessionId + "/map", "DELETE", requestBody)
         .then(function() {
             return replaceBody("play");
         })
@@ -673,7 +690,7 @@ loadExternalScript("public/combatMap.js");
         var width, height;
         width = parseInt(document.querySelector("[name='mapWidth']").value);
         height = parseInt(document.querySelector("[name='mapHeight']").value);
-        clear();
+        clear(true);
         pageContext.renderMap({
             width: width,
             height: height
@@ -682,6 +699,10 @@ loadExternalScript("public/combatMap.js");
 
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
+        if (!data.initiative) {
+            data.initiative = data.potential;
+            initiativeContext.addMob(data);
+        }
         pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
     };
 
@@ -746,6 +767,7 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.onListEvent("position", onPositionClicked);
 
         // When in set up mode, deleting an NPC gets rid of it completely.
+        // TODO When marging with dmSetup, don't broadcast until combat has started.
         initiativeContext.onListEvent("toggleMob", function(data) {
             pageContext.removeMapEvents();
             pageContext.removeMob(data);
@@ -754,6 +776,11 @@ loadExternalScript("public/combatMap.js");
             } else {
                 onPositionClicked(data);
             }
+
+            sendHttpRequest(
+                "session/" + window.sessionId + "/player/" + data.id + "/remove",
+                "PUT"
+            );
         });
         
         // When terrain type is selected, we can add a terrain to a cell.
@@ -765,7 +792,7 @@ loadExternalScript("public/combatMap.js");
         onEvent("[name='mapWidth']", "change", generateMap);
         onEvent("[name='mapHeight']", "change", generateMap);
 
-        onEvent("button[name='clear']", "click", clear);
+        onEvent("button[name='clear']", "click", clear.bind({}, false));
 
         onEvent("button[name='start']", "click", start);
 

@@ -115,6 +115,21 @@ shared = {
             _cache[id] = Object.assign(_cache[id] || {}, data);
         }
         return _cache[id];
+    },
+
+    /**
+     * Removes everything in the cache for a fresh start.
+     */
+    blowUpCache: function() {
+        _cache = {};
+    },
+    
+    /**
+     * Clears an item from the cache
+     * @param {string} id of item to remove.
+     */
+    clear: function(id) {
+        delete _cache[id];
     }
 };
 

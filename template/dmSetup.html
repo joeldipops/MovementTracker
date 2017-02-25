@@ -247,6 +247,11 @@ loadExternalScript("public/combatMap.js");
     renderMenu = function() {
         var menu, el, i, option;
         menu = document.getElementById("controls");
+        
+        while(menu.firstElementChild) {
+            menu.removeChild(menu.firstElementChild);
+        }
+
         menu.insertAdjacentHTML("beforeend", controlsTemplate);
 
         // NPC creature sizes.
