@@ -12,7 +12,7 @@ input[type='number'] {
 
     input[type=number]::-webkit-inner-spin-button,
     input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none; 
+        -webkit-appearance: none;
         margin: 0;
     }
 
@@ -48,7 +48,7 @@ body {
     body > aside {
         width: 30%;
     }
-    
+
     body > aside > * {
         display: table-row;
         height: 200px;
@@ -129,6 +129,11 @@ body {
         font-weight: bold;
         border-bottom-width: 0;
     }
+
+    .ctrl-tabSet > input[type='radio'].hiddenTab + label {
+        display: none;
+    }
+
     .ctrl-tabSet > input[type='radio']:not(:checked) + label + section,
     .ctrl-tabSet > input[type='radio']:not(:checked) + label + fieldset {
             display: none;
@@ -443,7 +448,7 @@ ul.ctrl-colourOption {
     top: 200px;
 }
 
-body[data-state='combat']:not([data-isMyTurn]) #controls > * { display: none; }
+body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
 
 #turn > .turnHeading {
     opacity: 0;

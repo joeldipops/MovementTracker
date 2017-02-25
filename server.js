@@ -201,7 +201,9 @@ function movePlayer(req, res) {
         "player_move" : {
             id : id,
             x : req.body.x,
-            y : req.body.y
+            y : req.body.y,
+            character_name : req.body.character_name,
+            colour: req.body.colour
         }
     });
     res.writeHead(200);

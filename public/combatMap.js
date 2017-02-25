@@ -145,9 +145,10 @@
     };
 
     pageContext.movementTypes = {
-        walk : { text : "WALK", passableTerrain : ["normal, difficult, climbable"] },
+        walk : { text : "WALK", passableTerrain : ["normal, difficult"] },
         swim: { text : "SWIM", passableTerrain : ["swimable"] },
-        fly : { text : "FLY", passableTerrain : ["normal, difficult, climable, swimmable"] }
+        fly : { text : "FLY", passableTerrain : ["normal, difficult, climbable, swimmable"] },
+        climb: {text : "CLIMB", passableTerrain : ["climbable"] }
     };
 
     // Not authoritative sizes.
@@ -170,7 +171,7 @@
         if (_mobs[x]) {
             return _mobs[x][y];
         }
-        return null;
+        return [];
     };
 
     /**
@@ -220,7 +221,7 @@
         el.classList.add("mob");
         el.setAttribute("data-id", data.id);
         el.setAttribute("title", data.character_name);
-        el.innerHTML = data.character_name[0];
+        el.innerHTML = (data.character_name || "?")[0];
         el.style.backgroundColor = data.colour || "#EEEEEE";
         container = pageContext.getCell(x, y);
         container.parentNode.appendChild(el);
