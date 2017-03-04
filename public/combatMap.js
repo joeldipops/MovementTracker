@@ -150,18 +150,49 @@
     };
 
     pageContext.terrainTypes = {
-        normal: { text : "Normal", colour : "rgba(0,0,0,0)" },
-        difficult : {text : "Difficult", colour : "#CCCCCC" },
-        climbable: { text: "Climbable", colour: "#DDAAAA" },
-        swimable: { text: "Swimable", colour: "#0000FF" },
-        impassable: { text: "Impassable", colour: "#000000" }
+        normal: {
+            text : "Normal",
+            colour : "rgba(0,0,0,0)",
+            speeds: ["fly", "walk"]
+        },
+        difficult : {
+            text : "Difficult",
+            colour : "#CCCCCC",
+            speeds: ["fly","walk|2"]
+        },
+        climbable: {
+            text: "Climbable",
+            colour: "#DDAAAA",
+            speeds: ["fly", "climb", "walk|2"]
+        },
+        swimable: {
+            text: "Swimable",
+            colour: "#0000FF",
+            speeds: ["fly", "swim", "walk|2"]
+        },
+        impassable: {
+            text: "Impassable",
+            colour: "#000000",
+        }
     };
 
     pageContext.movementTypes = {
-        walk : { text : "WALK", passableTerrain : ["normal, difficult"] },
-        swim: { text : "SWIM", passableTerrain : ["swimable"] },
-        fly : { text : "FLY", passableTerrain : ["normal, difficult, climbable, swimmable"] },
-        climb: {text : "CLIMB", passableTerrain : ["climbable"] }
+        walk : {
+            text : "WALK",
+            factor: 1
+        },
+        swim: {
+            text : "SWIM",
+            factor: 0.5
+        },
+        climb: {
+            text : "CLIMB",
+            factor: 0.5
+        },
+        fly : {
+            text : "FLY",
+            factor: 0
+        }
     };
 
     // Not authoritative sizes.

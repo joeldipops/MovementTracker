@@ -93,8 +93,12 @@ loadExternalScript("public/combatMap.js");
                     <label class="number" for="npcSpeed">WALK</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="0" />
+                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="15" />
                     <label class="number" for="npcSpeed-swim">SWIM</label>
+                </div>
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="15" />
+                    <label class="number" for="npcSpeed-climb">CLIMB</label>
                 </div>
                 <div class="ctrl-labelledNumber">
                     <input type="number" id="npcSpeed-fly" name="npcSpeed-fly" placeholder="0" />
@@ -126,7 +130,7 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function combatScript() {
-    var updateMap, triggerNextTurn, renderMenu, isInRange, getDistance, subtractMovement,
+    var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement,
         onMessageReceived, onTurnStart, onMyTurnStart, onDashChange, onTerrainMouseOver, onTerrainClick,
         onPlayerMove, onMoveSelected,
         template, _menuEl;
@@ -163,7 +167,6 @@ loadExternalScript("public/combatMap.js");
             renderDMMenu();
         } else {
             template = document.getElementById("template-controls").innerHTML;
-
             _menuEl.insertAdjacentHTML("beforeend", template);
         }
 
@@ -185,27 +188,33 @@ loadExternalScript("public/combatMap.js");
      * If player chooses to user her/his action/bonus to dash, adjust the remaining speed.
      */
     onDashChange = function() {
-        var el, base, max;
-        el = _menuEl.querySelector("#movementType-walk");
-        base = parseInt(el.getAttribute("data-base"));
-        used = parseInt(el.getAttribute("data-used"));
-        total = base;
+        var el, els, i, base, max,
+            dashChecked, bonusChecked;
+        els = _menuEl.querySelectorAll("[name='movementType']");
+        dashChecked = !!_menuEl.querySelector("[name='dashAction']:checked");
+        bonusChecked = !!_menuEl.querySelector("[name='dashBonus']:checked");
+        for (i = 0; i < els.length; i++) {
+            el = els[i];
+            base = parseInt(el.getAttribute("data-base"));
+            used = parseInt(el.getAttribute("data-used"));
+            total = base;
 
-        if (_menuEl.querySelector("[name='dashAction']:checked")) {
-            total += base;
+            if (dashChecked) {
+                total += base;
+            }
+            if (bonusChecked) {
+                total += base;
+            }
+
+            total -= parseInt(el.getAttribute("data-used"));
+
+            if (total < 0) {
+                total = 0;
+            }
+
+            el.setAttribute("data-remaining", total);
+            el.parentNode.querySelector("[for='" + el.id + "'] [name='remaining']").innerHTML = total;
         }
-        if (_menuEl.querySelector("[name='dashBonus']:checked")) {
-            total += base;
-        }
-
-        total -= parseInt(el.getAttribute("data-used"));
-
-        if (total < 0) {
-            total = 0;
-        }
-
-        el.setAttribute("data-remaining", total);
-        el.parentNode.querySelector("[for='" + el.id + "'] [name='remaining']").innerHTML = total;
     };
 
     /**
@@ -230,9 +239,9 @@ loadExternalScript("public/combatMap.js");
             if (!pageContext.movementTypes.hasOwnProperty(k)) {
                 continue;
             }
-            // We don't have this speed.
+            // We don't have this speed, so calculate it.
             if (!data.speed[k]) {
-                continue;
+                data.speed[k] = (data.speed["walk"] * pageContext.movementTypes[k].factor) || 0;
             }
 
             temp = template.replace(/{type}/g, k)
@@ -292,23 +301,90 @@ loadExternalScript("public/combatMap.js");
     window.initiativeContext.onListEvent("turn_start", onTurnStart);
 
     /**
-     * Calculates whether the mob can reach the given point this turn.
+     * Calculates whether the mob can reach the given point this turn, then moves them.
      * @param {HTMLElement} current tile the mob is currently on.
      * @param {HTMLElement} candidate tile the mob tries to reach.
-     * @param {object} speed object with mobs selected movement speed.
-     * @returns {boolean} true is point can be reach.
+     * @param {object} mob Specifiy a mob to move.  If empty will just simulate the move to check if it can be done.
+     * @returns {boolean} true if point can be reached.
      */
-    isInRange = function(current, candidate, speed) {
-        if (speed.remaining <= 0) {
+    attemptMove = function(current, candidate, mob) {
+        var distance, els, speeds, i, j, k, value, total, startDistance;
+        els = _menuEl.querySelectorAll("[name='movementType']");
+        speeds = {};
+        for (i = 0; i < els.length; i++) {
+            value = parseInt(els[i].getAttribute("data-remaining"));
+            if (value) {
+                speeds[els[i].getAttribute("value")] = value;
+            }
+        }
+        // No movement left.
+        if (!Object.keys(speeds).length) {
             return false;
         }
-        if (getDistance(
+
+        distance = getDistance(
             parseInt(candidate.getAttribute("data-x")),
             parseInt(candidate.getAttribute("data-y")),
             parseInt(current.getAttribute("data-x")),
             parseInt(current.getAttribute("data-y"))
-        ) > speed.remaining) {
+        );
+        // Can't pass the impassable.
+        if (distance["impassable"]) {
             return false;
+        }
+        total = 0;
+
+        // For each type of terrain
+        for (k in distance) {
+            if (!distance.hasOwnProperty(k)) {
+                continue;
+            }
+            // Use the best speed we have first (eg. swimming for water)
+            for (i = 0; i < pageContext.terrainTypes[k].speeds.length; i++) {
+                startDistance = distance[k];
+                if (distance[k] <= 0) {
+                    break;
+                }
+                value = (pageContext.terrainTypes[k].speeds[i] || []).split("|");
+                if (!speeds[value[0]]) {
+                    continue;
+                }
+                value[1] = value[1] ? parseFloat(value[1], 10) : 1;
+                if ((distance[k] * value[1]) < speeds[value[0]]) {
+                    // made the distance with speed to spare.
+                    speeds[value[0]] -= distance[k] * value[1];
+                    distance[k] = 0;
+                } else if ((distance[k] * value[1]) > speeds[value[0]]) {
+                    // used up all of this speed trying to make the distance.
+                    distance[k] -= Math.floor(speeds[value[0]] / value[1]);
+                    speeds[value[0]] = 0;
+                } else {
+                    // Used all of this speed, but made the distance.
+                    distance[k] = 0;
+                    speeds[value[0]] = 0;
+                }
+
+                // Adjust all speeds by distance already moved.
+                for (j in speeds) {
+                    if (!speeds.hasOwnProperty(j) || j === value[0]) {
+                        continue;
+                    }
+                    speeds[j] -= (startDistance - distance[k]);
+                    speeds[j] = speeds[j] >= 0 ? speeds[j] : 0;
+                }
+
+                if (distance[k] === 0) {
+                    break;
+                }
+            }
+            // If we couldn't complete the distance with all our speeds, then it's not in range.
+            if (distance[k]) {
+                return false;
+            }
+        }
+        if (mob) {
+            subtractMovement(speeds);
+            moveMob(mob, candidate);
         }
         return true;
     };
@@ -323,12 +399,77 @@ loadExternalScript("public/combatMap.js");
      * @returns {number} The distance.
      */
     getDistance = function(x1, y1, x2, y2) {
-        // Pythagoras
-        distance = Math.sqrt(Math.pow(Math.abs(x2 - x1), 2) + Math.pow(Math.abs(y2 - y1), 2));
-        // Apply transformation and remove decimal.
-        distance = Math.floor(distance * UNITS_PER_TILE);
-        // Can't be less than 0
-        return distance >= 0 ? distance : 0;
+        var distance, m, c, i, k, factor, visited,
+            x, y, result, cell;
+
+        result = {};
+
+        // Vertical line
+        if (x1 === x2) {
+            if (y1 === y2) {
+                return result;
+            }
+            for (
+                y = ((y1 < y2) ? y1 : y2) + 1;
+                y <= ((y1 < y2) ? y2 : y1);
+                y++
+            ) {
+                cell = pageContext.getCell(x1, y);
+                cell = cell.getAttribute("data-type");
+                if (!result[cell]) {
+                    result[cell] = 0;
+                }
+                result[cell] += UNITS_PER_TILE;
+            }
+            return result;
+        }
+
+        factor = UNITS_PER_TILE * 10;
+
+        x1 *= factor;
+        x2 *= factor;
+        y1 *= factor;
+        y2 *= factor;
+
+        // Find the line between the two points,
+        m = (y2 - y1)/(x2 - x1);
+        c = y1 - (m * x1);
+
+        visited = {};
+
+        // Find proportion of terrains the line passes through.
+        for (
+            i = (x1 < x2 ? x1 : x2) + 1;
+            i <= (x1 < x2 ? x2 : x1);
+            i++
+        ) {
+            y = Math.floor((m * i + c) / factor);
+            x = Math.floor(i / factor);
+
+            //if (visited[x + "," + y]) {
+            //    continue;
+            //}
+            //visited[x + "," + y] = true;
+
+            cell = pageContext.getCell(x, y);
+            cell = cell.getAttribute("data-type");
+            if (!result[cell]) {
+                result[cell] = 0;
+            }
+            //result[cell] += UNITS_PER_TILE;
+            result[cell]++;
+        }
+
+        // Find the actual distance travelled with pythagoras.
+        distance = (Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)) / factor) * UNITS_PER_TILE;
+
+        for (k in result) {
+            if (!result.hasOwnProperty(k)) {
+                continue;
+            }
+            result[k] = Math.round(distance * (result[k] / Math.abs(x2 - x1)));
+        }
+        return result;
     };
 
     /**
@@ -343,12 +484,7 @@ loadExternalScript("public/combatMap.js");
         loc = pageContext.getMobWithId(mob.id);
         current = pageContext.getCell(loc.x, loc.y);
 
-        speedEl = _menuEl.querySelector("[name='movementType']:checked");
-
-        if (isInRange(current, event.currentTarget, {
-            type: speedEl.value,
-            remaining : speedEl.getAttribute("data-remaining")
-        })) {
+        if (attemptMove(current, event.currentTarget)) {
             event.currentTarget.classList.add("reachable");
         } else {
             event.currentTarget.classList.add("unreachable");
@@ -370,35 +506,27 @@ loadExternalScript("public/combatMap.js");
             // Set the colour (important for mobile).
             onTerrainMouseOver(mob, event);
         } else {
-            speedEl = _menuEl.querySelector("[name='movementType']:checked");
             loc = pageContext.getMobWithId(mob.id);
-            if (isInRange(
-                pageContext.getCell(loc.x, loc.y),
-                event.currentTarget,
-                {
-                    type: speedEl.value,
-                    remaining : parseInt(speedEl.getAttribute("data-remaining"))
-                }
-            )) {
-                distance = moveMob(mob, event.currentTarget);
-                subtractMovement(distance, speedEl);
-            }
+            attemptMove(pageContext.getCell(loc.x, loc.y), event.currentTarget, mob);
         }
         event.preventDefault();
     };
 
     /**
      * Updates your remaining movement after any move.
-     * @param {number} distance How far was moved.
-     * @param {HTMLElement} el Element with movement/speed details.
+     * @param {object} speeds How much of each speed is left.
      */
-    subtractMovement = function(distance, el) {
-        var remaining;
-        el.setAttribute("data-used", parseInt(el.getAttribute("data-used")) + distance);
-        remaining = parseInt(el.getAttribute("data-remaining")) - distance;
-        remaining = remaining >= 0 ? remaining : 0;
-        el.setAttribute("data-remaining", remaining);
-        el.parentNode.querySelector("[for='"+ el.id + "'] [name='remaining']").innerHTML = remaining;
+    subtractMovement = function(speeds) {
+        var el, k;
+        for (k in speeds) {
+            el = _menuEl.querySelector("[name='movementType'][value='"+ k  +"']");
+            el.setAttribute(
+                "data-used",
+                parseInt(el.getAttribute("data-used")) + (parseInt(el.getAttribute("data-remaining")) - speeds[k])
+            );
+            el.setAttribute("data-remaining", speeds[k]);
+            el.parentNode.querySelector("[for='"+ el.id + "'] [name='remaining']").innerHTML = speeds[k];
+        }
     };
 
     /**
@@ -697,6 +825,9 @@ loadExternalScript("public/combatMap.js");
         }, mapCellTemplate);
     };
 
+    /**
+     * Moves the in-context mob to the clicked location.
+     */
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
         if (!data.initiative) {
@@ -750,7 +881,8 @@ loadExternalScript("public/combatMap.js");
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {
                     walk : parseInt(document.querySelector("[name='npcSpeed']").value) || 30,
-                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 0,
+                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 15,
+                    climb: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 15,
                     fly: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0
                 },
                 id : (new Date()).valueOf().toString()
