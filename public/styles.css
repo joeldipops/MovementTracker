@@ -288,11 +288,11 @@ td.ctrl-combatCell {
     }
 
     td.ctrl-combatCell > .terrain.reachable:hover {
-        background-color: rgba(0, 255, 0, 0.4);
+        background-color: rgba(0, 255, 0, 0.4) !important;
     }
 
     td.ctrl-combatCell > .terrain.unreachable:hover {
-        background-color: rgba(255, 0, 0, 0.4);
+        background-color: rgba(255, 0, 0, 0.4) !important;
     }
 
 table.ctrl-combatMap {

@@ -93,11 +93,11 @@ loadExternalScript("public/combatMap.js");
                     <label class="number" for="npcSpeed">WALK</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="15" />
+                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="0" />
                     <label class="number" for="npcSpeed-swim">SWIM</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="15" />
+                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="0" />
                     <label class="number" for="npcSpeed-climb">CLIMB</label>
                 </div>
                 <div class="ctrl-labelledNumber">
@@ -239,9 +239,10 @@ loadExternalScript("public/combatMap.js");
             if (!pageContext.movementTypes.hasOwnProperty(k)) {
                 continue;
             }
-            // We don't have this speed, so calculate it.
+            // We don't have this speed.
             if (!data.speed[k]) {
-                data.speed[k] = (data.speed["walk"] * pageContext.movementTypes[k].factor) || 0;
+                //data.speed[k] = (data.speed["walk"] * pageContext.movementTypes[k].factor) || 0;
+                continue;
             }
 
             temp = template.replace(/{type}/g, k)
@@ -591,7 +592,7 @@ loadExternalScript("public/combatMap.js");
      * Handles messages received through the web socket.
      */
     onReceiveMessage = function(event) {
-        var data;
+        var data, fn;
         data = JSON.parse(event.data);
         if (data["map_update"]) {
             updateMap(data["map_update"]);
@@ -599,7 +600,18 @@ loadExternalScript("public/combatMap.js");
         if (data["player_move"]) {
             onPlayerMove(data["player_move"]);
         }
-
+        if (data["terrain_update"]) {
+            fn = function(data) {
+                var x, y, size;
+                size = pageContext.getSize();
+                for (x = data.left; x < (data.left + data.width) && x <= size.width; x++) {
+                    for(y = data.top; y < (data.top + data.height) && y <= size.height; y++) {
+                        pageContext.setTerrain(x, y, data.type);
+                    }
+                }
+            };
+            fn(data["terrain_update"]);
+        }
         if (data["player_remove"]) {
             pageContext.removeMob(data["player_remove"]);
         }
@@ -780,7 +792,7 @@ loadExternalScript("public/combatMap.js");
             {
                 x : x, y: y,
                 character_name : data.character_name,
-                colour : data.colour 
+                colour : data.colour
             }
         );
         return true;
@@ -809,6 +821,18 @@ loadExternalScript("public/combatMap.js");
                 pageContext.setTerrain(X, Y, type);
             }
         }
+
+        sendHttpRequest(
+            "session/" + window.sessionId + "/map/add",
+            "PUT",
+            {
+                left: x,
+                top : y,
+                width: width,
+                height: height,
+                type: type
+            }
+        );
     };
 
     /**
@@ -881,8 +905,8 @@ loadExternalScript("public/combatMap.js");
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {
                     walk : parseInt(document.querySelector("[name='npcSpeed']").value) || 30,
-                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 15,
-                    climb: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 15,
+                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 0,
+                    climb: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0,
                     fly: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0
                 },
                 id : (new Date()).valueOf().toString()

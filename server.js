@@ -33,9 +33,11 @@ server.get(/session\/[0-9]+\/turn/, getCurrentTurn);
 
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
+server.put(/session\/[0-9]+\/map\/add/, addTerrain);
 server.get(/session\/[0-9]+\/map/, downloadMap);
 server.put(/session\/[0-9]+\/map/, uploadMap);
 server.del(/session\/[0-9]+\/map/, resetMap);
+
 
 server.get(/session(\/[0-9]+)?$/, getSession);
 server.del(/session\/[0-9]+/,deleteSession);
@@ -73,6 +75,13 @@ function uploadMap(req, res) {
     sessionId = getEntityId("session", req);
     socketServerControl.cache(`map-${sessionId}`, req.body);
     socketServerControl.broadcastJSON({ map_update : req.body });
+    res.writeHead(200);
+    res.end();
+};
+
+function addTerrain(req, res) {
+    var sessionId, message;
+    socketServerControl.broadcastJSON({ terrain_update : req.body }, [req.body.socket_id]);
     res.writeHead(200);
     res.end();
 };
