@@ -97,7 +97,7 @@ loadExternalScript("public/combatMap.js");
                     <label class="number" for="npcSpeed-swim">SWIM</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="0" />
+                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="0   " />
                     <label class="number" for="npcSpeed-climb">CLIMB</label>
                 </div>
                 <div class="ctrl-labelledNumber">
@@ -131,8 +131,8 @@ loadExternalScript("public/combatMap.js");
 <script type="application/javascript">
 (function combatScript() {
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement,
-        onMessageReceived, onTurnStart, onMyTurnStart, onDashChange, onTerrainMouseOver, onTerrainClick,
-        onPlayerMove, onMoveSelected,
+        onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart,
+        onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove, onMoveSelected, onReactClicked,
         template, _menuEl;
 
     template = mainEl.querySelector("#template-combatCell").innerHTML;
@@ -267,6 +267,13 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
+     * Set up for the start of combat.
+     */
+    onCombatStart = function() {
+        initiativeContext.toggleReaction(window.playerId, true);
+    };
+
+    /**
      * Reset the UI when each new turn starts
      * @param {object} data the mob whose turn it is.
      */
@@ -392,12 +399,11 @@ loadExternalScript("public/combatMap.js");
 
     /**
      * Calculates the distance between two points.
-     * TODO: Difficult terrain etc.
-     * @param {number} x1
-     * @param {number} y1
-     * @param {number} x2
-     * @param {number} y2
-     * @returns {number} The distance.
+     * @param {number} x1 current horizontal position.
+     * @param {number} y1 current "vertical" position.
+     * @param {number} x2 candidate horizontal position.
+     * @param {number} y2 candidate "vertical" position
+     * @returns {object} Distanced travelled through each type of terrain.
      */
     getDistance = function(x1, y1, x2, y2) {
         var distance, m, c, i, k, factor, visited,
@@ -577,6 +583,7 @@ loadExternalScript("public/combatMap.js");
             _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 4);
             tab.checked = true;
         }
+        window.initiativeContext.toggleReaction(data.id, true);
         onMoveSelected(data);
     };
     
@@ -615,7 +622,12 @@ loadExternalScript("public/combatMap.js");
         if (data["player_remove"]) {
             pageContext.removeMob(data["player_remove"]);
         }
-
+        if (data["player_react"]) {
+            onReactionUsed(data["player_react"]);
+        }
+        if (data["combat_start"]) {
+            onCombatStart();
+        }
         // ignored by dm
         if (!document.body.hasAttribute("data-isDm")) {
             if (data["combat_end"]) {
@@ -649,6 +661,7 @@ loadExternalScript("public/combatMap.js");
                     }
                 }
                 renderMenu();
+                initiativeContext.onListEvent("react", onReactClicked);
                 return true;
             }
             return false;
@@ -690,7 +703,7 @@ loadExternalScript("public/combatMap.js");
     start = function() {
         var requestBody;
         requestBody = pageContext.mapToJSON();
-        sendHttpRequest("session/" + window.sessionId + "/map", "DELETE", requestBody)
+        sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
             return replaceBody("play");
         })
@@ -859,6 +872,31 @@ loadExternalScript("public/combatMap.js");
             initiativeContext.addMob(data);
         }
         pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
+    };
+
+
+    /**
+     * Notifies all players that a reaction has been used.
+     */
+    onReactClicked = function(data) {
+        sendHttpRequest(
+            "session/" + window.sessionId + "/player/" + data.id + "/react",
+            "POST"
+        );
+        initiativeContext.toggleReaction(data.id, false);
+    };
+
+    /**
+     * Displays a message that a reaction was used.
+     */
+    onReactionUsed = function(data) {
+        var mob;
+        if (isEqual(data.player_id, window.playerId)) {
+            alert("You React!");
+        } else {
+            mob = initiativeContext.getMobData(data.player_id);
+            alert(mob.character_name + " Reacts!");
+        }
     };
 
     /**

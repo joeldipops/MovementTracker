@@ -212,7 +212,7 @@ body {
     }
     .initiativeList > li > .initiativeScore { display: none; }
     /* TODO Implement reactions & remove !important directive. */
-    .initiativeList > li > [name='react'] { display: none !important; }
+    .initiativeList > li > [name='react'] { display: none; }
     .initiativeList > li > [name='position'] { display: none; }
     .initiativeList > li > [name='toggleMob'] { display: none; }
 

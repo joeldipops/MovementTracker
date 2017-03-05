@@ -1,7 +1,7 @@
 <div>Waiting for DM</div>
 <ol class="initiativeList"></ol>
 <script id="template-initiativeListItem" type="text/html">
-<li class="mob" data-id="" data-mobType="" data-initiative="" data-speed="">
+<li class="mob" data-id="" data-mobType="" data-initiative="" data-speed="" data-reacted>
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
     <button name="position">@</button>
@@ -13,12 +13,13 @@
 window.initiativeContext = {};
 (function socialScript() {
     var onReceiveMessage, onClose, bindInputEvents,
-        addPlayer, removePlayer, addDM, removeDM, startNextTurn, getNext,
-        _template, _listEl, _subscribers, _events, _orderIndex;
+        addPlayer, removePlayer, addDM, removeDM, startNextTurn, getNext, liToData,
+        _template, _listEl, _subscribers, _events, _orderIndex, _eventIndex;
 
     _listEl = document.querySelector("#social .initiativeList");
     _subscribers = {};
     _events = [];
+    _eventIndex = {};
     _orderIndex = 1;
 
     _template = document.querySelector("#template-initiativeListItem").innerHTML;
@@ -29,7 +30,7 @@ window.initiativeContext = {};
     onClose = function() {
         window.socket.removeEventListener("message", onReceiveMessage);
         _subscribers = {};
-        
+        _eventIndex = {};
         for (i = 0; i < _events.length; i++) {
             _events[i]();
         }
@@ -39,49 +40,72 @@ window.initiativeContext = {};
     /**
      * Ensures click etc events will fire for each item in the list.
      * @param {HTMLElement} The list item with buttons to bind.
+     * @param {string} namespace Optional id to namespace events, so they can be cleaned up without affecting other events.
      */
-     bindInputEvents = function(li) {
-         var buttons, handler;
+     bindInputEvents = function(li, id) {
+         var buttons, handler, i;
          buttons = li.querySelectorAll("button");
          handler = fireEvent.bind({}, li);
+
+         // Unbind existing events for this id
+         if (id && _eventIndex[id]) {
+            for (i = 0; i < _eventIndex[id].length; i++) {
+                _events[_eventIndex[id][i]]();
+            }
+             delete _eventIndex[id];
+         }
+
+         // Bind new events, add them to the index, and add the unbinder to be cleaned up later.
          for (i = 0; i < buttons.length; i++) {
              buttons[i].addEventListener("click", handler);
+             if (id) {
+                _eventIndex[id] = _eventIndex[id] || [];
+                _eventIndex[id].push(_events.length);
+             }
              _events.push(buttons[i].removeEventListener.bind(buttons[i], "click", handler));
          }
      };
 
-     /**
-      * Calls subscribing callbacks.
-      * @param {HTMLElement} li parentNode of the clicked element.
-      * @param {DOMElement} event that occured.
-      */
-     fireEvent = function(li, event) {
-         var name, data, i;
-         if (typeof event === "string") {
-             name = event;
-         } else {
+    /**
+     * Extracts all the data about a mob stored as data-atrributes on the list item.
+     * @param {HTMLElement} li The list item.
+     * @returns {object} The data as an object.
+     */
+    liToData = function(li) {
+        var result = {};
+        result = {};
+        result.id = li.getAttribute("data-id");
+        result.size = li.getAttribute("data-size");
+        result.mob_type = li.getAttribute("data-mobType");
+        result.colour = li.style.color;
+        result.character_name = li.querySelector(".mobName").innerHTML;
+        result.initiative = parseInt(li.getAttribute("data-initiative"));
+        result.potential = parseInt(li.getAttribute("data-potential"));
+        result.order = parseInt(li.getAttribute("data-order"));
+        result.speed = {
+            walk : parseInt(li.getAttribute("data-speed"))
+        };
+        return result;
+    };
+
+    /**
+     * Calls subscribing callbacks.
+     * @param {HTMLElement} li parentNode of the clicked element.
+     * @param {DOMElement} event that occured.
+     */
+    fireEvent = function(li, event) {
+        var name, data, i;
+        if (typeof event === "string") {
+            name = event;
+        } else {
             name = event.currentTarget.getAttribute("name");
-         }
-
-         if (_subscribers[name] && _subscribers[name].length) {
-            data = {};
-            data.id = li.getAttribute("data-id");
-            data.size = li.getAttribute("data-size");
-            data.mob_type = li.getAttribute("data-mobType");
-            data.colour = li.style.color;
-            data.character_name = li.querySelector(".mobName").innerHTML;
-            data.initiative = parseInt(li.getAttribute("data-initiative"));
-            data.potential = parseInt(li.getAttribute("data-potential"));
-
-            data.order = parseInt(li.getAttribute("data-order"));
-            data.speed = {
-                walk : parseInt(li.getAttribute("data-speed"))
-            };
-
+        }
+        if (_subscribers[name] && _subscribers[name].length) {
+            data = liToData(li);
             for (i = 0; i < _subscribers[name].length; i++) {
                 _subscribers[name][i](data);
             }
-         }
+        }
      };
 
     /**
@@ -251,7 +275,7 @@ window.initiativeContext = {};
             }
             li.classList.add("currentTurn");
         }
-        bindInputEvents(li);
+        bindInputEvents(li, data.id);
     };
 
     /**
@@ -369,6 +393,33 @@ window.initiativeContext = {};
         if((i = _subscribers[event].indexOf(handler)) >= 0) {
             _subscribers[event].splice(i, 1);
         }
+    };
+
+    /**
+     * Enable or disable a button.
+     * @param {string} id Id of the mob with the button.
+     * @param {boolean} isOn Whether the button should be set as enabled or disabled.
+     */
+    window.initiativeContext.toggleReaction = function(id, isOn) {
+        var el = _listEl.querySelector("[data-id='"+ id +"']");
+        if (isOn) {
+            el.removeAttribute("data-reacted");
+        } else {
+            el.setAttribute("data-reacted", "");
+        }
+    };
+
+    /**
+     * @param {string} id Of the mob.
+     * @returns {object} data on the mob contained in the list or null if the mob doesn't exist.
+     */
+    window.initiativeContext.getMobData = function(id) {
+        var result, el;
+        el = _listEl.querySelector("[data-id='"+ id +"']");
+        if (!el) {
+            return null;
+        }
+        return liToData(el);
     };
 
     /**

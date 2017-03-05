@@ -74,7 +74,10 @@ function uploadMap(req, res) {
     var sessionId, message;
     sessionId = getEntityId("session", req);
     socketServerControl.cache(`map-${sessionId}`, req.body);
-    socketServerControl.broadcastJSON({ map_update : req.body });
+    socketServerControl.broadcastJSON({
+        combat_start: true,
+        map_update : req.body
+    });
     res.writeHead(200);
     res.end();
 };
@@ -214,7 +217,16 @@ function readyPlayer(req, res) {
     res.end();
 };
 
+/**
+ * Broadcasts that a reaction has been used.
+ */
 function useReaction(req, res) {
+    var playerId = getEntityId("player", req);
+    socketServerControl.broadcastJSON({
+        "player_react" : { player_id : playerId }
+    });
+    res.writeHead(200);
+    res.end();
 };
 
 /**
