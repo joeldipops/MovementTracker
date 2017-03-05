@@ -1,5 +1,4 @@
 <article id="turn">
-    <h1 class="turnHeading"></h1>
     <table id="map" class="ctrl-combatMap">
     </table>
 </article>
@@ -128,14 +127,18 @@ loadExternalScript("public/combatMap.js");
         <label for="terrainType-{type}">{text}</label>
     </li>
 </script>
+<script id="template-reactionAlert" type="text/html">
+    <h1>{message}</h1>
+</script>
 <script type="application/javascript">
 (function combatScript() {
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement,
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart,
         onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove, onMoveSelected, onReactClicked,
-        template, _menuEl;
+        _template, _reactTemplate, _menuEl;
 
-    template = mainEl.querySelector("#template-combatCell").innerHTML;
+    _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
+    _template = mainEl.querySelector("#template-combatCell").innerHTML;
     _menuEl = document.getElementById("controls");
 
     /**
@@ -145,7 +148,7 @@ loadExternalScript("public/combatMap.js");
      */
     updateMap = function(data, turnMobId) {
         var k, i;
-        pageContext.renderMap(data, template);
+        pageContext.renderMap(data, _template);
         window.initiativeContext.clearNpcs();
         for (k in data.mobs) {
             for (i = 0; i < data.mobs[k].length; i++) {
@@ -278,14 +281,16 @@ loadExternalScript("public/combatMap.js");
      * @param {object} data the mob whose turn it is.
      */
     onTurnStart = function(data) {
-        var heading, el;
+        var message, el;
         pageContext.removeMapEvents();
+        message = "<h1>" + data.character_name + "s Turn</h1>";
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
             // DM's turn for NPCs
             onMyTurnStart(data);
         } else if (isEqual(data.id, window.playerId)) {
             // Player's turn.
             onMyTurnStart(data);
+            message = "<h1>Your Turn</h1>";
         } else {
             // Switch off for everyone else.
             document.body.removeAttribute("data-isMyTurn");
@@ -298,13 +303,7 @@ loadExternalScript("public/combatMap.js");
             }
         }
         window.pageContext.setTurn(data.id);
-        heading = mainEl.querySelector(".turnHeading");
-        heading.classList.remove("updated");
-        heading.innerHTML = data.character_name + "'s Turn";
-
-        setTimeout(function() {
-            heading.classList.add("updated");
-        }, 50);
+        showAlert(message, 1000);
     };
     window.initiativeContext.onListEvent("turn_start", onTurnStart);
 
@@ -890,13 +889,14 @@ loadExternalScript("public/combatMap.js");
      * Displays a message that a reaction was used.
      */
     onReactionUsed = function(data) {
-        var mob;
+        var mob, message;
         if (isEqual(data.player_id, window.playerId)) {
-            alert("You React!");
+            message = "You React!";
         } else {
             mob = initiativeContext.getMobData(data.player_id);
-            alert(mob.character_name + " Reacts!");
+            message = mob.character_name + " Reacts!";
         }
+        showAlert(_reactTemplate.replace("{message}", message), 1000);
     };
 
     /**

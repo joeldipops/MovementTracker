@@ -1,6 +1,6 @@
 var UNITS_PER_TILE, mainEl,
     onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
-    sendHttpRequest, replaceBody, loadExternalScript,
+    showAlert, sendHttpRequest, replaceBody, loadExternalScript,
     pageContext;
 
 UNITS_PER_TILE = 5;
@@ -8,10 +8,28 @@ pageContext = {};
 
 var a = function() {
     var _pageEvents, _pendingPromises, _pendingTimeouts,
-        evaluateScripts, toQueryString, socketControl, nativeParseInt;
+        evaluateScripts, toQueryString, socketControl, nativeParseInt, nativeSetTimeout;
     _pageEvents = [];
     _pendingCancelFlags = [];
     _pendingTimeouts = [];
+
+    /**
+     * Shows an alert for an amount of time before hiding it.
+     * @param {string} Content the inner HTML of the alert.
+     * @param {number} milliseconds to show alert for. Will not automatically hide if none specified.
+     */
+    showAlert = function(content, timeout) {
+        var hideAlert = function() {
+            el.classList.remove("active");
+        };
+        var el = document.body.querySelector(".ctrl-modal");
+        el.innerHTML = content;
+        el.style.left = Math.floor((document.body.clientWidth  - el.clientWidth) / 2) + "px";
+        el.classList.add("active");
+        if (timeout) {
+            setTimeout(hideAlert, timeout);
+        }
+    }
 
     /**
      * Keeps track of page-level events so they can be unbound later. 
@@ -31,7 +49,6 @@ var a = function() {
             target[i].addEventListener(event, handler);
             _pageEvents.push(target[i].removeEventListener.bind(target[i], event, handler));
         }
-
     };
 
     /**
@@ -60,7 +77,7 @@ var a = function() {
      */
     wait = function(callback) {
         if (!callback()) {
-            _pendingTimeouts.push(setTimeout(wait.bind({}, callback), 50));
+            setTimeout(wait.bind({}, callback), 50);
         }
     };
 
@@ -93,6 +110,23 @@ var a = function() {
     parseInt = function(value, r) {
         return nativeParseInt(value, r !== void 0 ? r : 10);
     };
+
+    /**
+     * Overrides setTimeout so all timers can be cancelled at once.
+     * @param {function} fn The function to be called once time has elapsed.
+     * @param {number} timeout Time in milliseconds to wait.
+     * @param {object} context Context to bind to the callback.
+     * @returns {number} Id of the timer so it can be cleared.
+     */
+    nativeSetTimeout = window.setTimeout;
+    setTimeout = function(fn, timeout, context) {
+        var timerId;
+        fn = context ? fn.bind(context) : fn;
+        timerId = nativeSetTimeout(fn, timeout);
+        _pendingTimeouts.push(timerId);
+        return timerId;
+    };
+    
 
     /**
      * Keeps track of pending promises so they can be rejected when no longer needed.

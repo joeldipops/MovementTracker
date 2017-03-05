@@ -45,16 +45,16 @@ body {
         display : table-cell;
     }
     body > article {}
-    body > aside {
+    body > aside:first-child {
         width: 30%;
     }
 
-    body > aside > * {
+    body > aside:first-child > * {
         display: table-row;
         height: 200px;
     }
     
-    body > aside > * > section {
+    body > aside:first-child > * > section {
         display: table-cell;
         padding-left: 10px;
         padding-right: 10px;
@@ -437,7 +437,36 @@ ul.ctrl-colourOption {
             background-color: #FFFF00;
         }
 
-.ctrl-modal > div {
+.ctrl-modal {
+    position: fixed;
+    display: block;
+    top: 200px;
+
+    border: black 2px solid;
+    background-color: white;
+    padding: 10px;
+
+    -webkit-transition: opacity 2s ease-in, visibility 2s step-end;
+    -moz-transition: opacity 2s ease-in, visibility 2s step-end;
+    -o-transition: opacity 2s ease-in, visibility 2s step-end;
+    -ms-transition: opacity 2s ease-in, visibility 2s step-end;
+    transition: opacity 2s ease-in, visibility 2s step-end;
+    opacity: 0;
+    visibility: hidden;
+}
+
+    .ctrl-modal.active {
+        -webkit-transition: opacity 0.5s ease-in;
+        -moz-transition: opacity 0.5s ease-in;
+        -o-transition: opacity 0.5s ease-in;
+        -ms-transition: opacity 0.5s ease-in;
+        transition: opacity 0.5s ease-in;
+        opacity: 1;
+        visibility: visible;
+    }
+
+/* Temporary "modal" that needs cleaning up. */
+.ctrl-modal_ > div {
     position: fixed;
     left: 0;
     top: 0;
@@ -446,7 +475,7 @@ ul.ctrl-colourOption {
     background-color: rgba(255,255,255,0.4);
 }
 
-.ctrl-modal > section {
+.ctrl-modal_ > section {
     margin: 0 auto;
     width: 30%;
     position: absolute;
