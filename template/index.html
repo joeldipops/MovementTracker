@@ -104,13 +104,15 @@
             body.speed = parseInt(mainEl.querySelector("[name='speed']").value);
         }
 
+        // Create the session if needed, then upload the new player.
         if (window.sessionId) {
             result = sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
         } else {
-            result = sendHttpRequest("session", "POST")
+            result = sendHttpRequest("session", "POST", {})
             .then(function(result) {
                 var data = JSON.parse(result.responseText || null);
-                return sendHttpRequest("session/" + data.session_id + "/player", "PUT", body);
+                window.sessionId = data.session_id;
+                return sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
             });
         }
 

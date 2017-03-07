@@ -73,7 +73,7 @@ shared = {
                 continue;
             }
             // ignore excluded connections.
-            if (excluding && excluding.indexOf(i) >= 0) {
+            if (excluding && excluding.indexOf(parseInt(i, 10)) >= 0) {
                 continue;
             }
             _connections[i].sendUTF(message);

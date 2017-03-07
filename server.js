@@ -139,7 +139,7 @@ function getCurrentTurn(req, res) {
  * Creates or updates a player.
  */
 function putPlayer(req, res) {
-    var dbParams, query, path, sessionId;
+    var dbParams, query, path, sessionId, cached;
 
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
@@ -171,6 +171,8 @@ function putPlayer(req, res) {
         }
         player = socketServerControl.cache(req.body.socket_id, {
             player_id : result.rows[0].playerid,
+            character_name: req.body.character_name,
+            session_id: sessionId,
             id : result.rows[0].playerid,
             socket_id : req.body.socket_id,
             player_type : req.body.player_type,
@@ -180,6 +182,9 @@ function putPlayer(req, res) {
                 walk : req.body.speed
             }
         });
+        cached = {};
+        cached[req.body.socket_id] = true;
+        socketServerControl.cache(`currentPlayerList-${sessionId}`, cached);
         if (!playerId) {
             switch(req.body.player_type) {
                 case "dm": messageType="dm_add"; break;
@@ -294,39 +299,30 @@ function deleteSession(req, res) {
 };
 
 function getPlayerList(req, res) {
-    var path, sessionId, params, cached;
+    var path, sessionId, params, cached, item, body;
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
     params = getParams(req);
 
-    db.runQuery(queries.getPlayers, [sessionId, JSON.parse(params.player_type || null)], function(result) {
-        var i, body;
-        if (!result) {
-            return serveError(res);
+    body = { players : [] };
+    cached = socketServerControl.cache(`currentPlayerList-${sessionId}`);
+
+    for (var k in cached) {
+        if (!cached.hasOwnProperty(k)) {
+            continue;
         }
-        body = { players : [] };
-        for (i = 0; i < result.rows.length; i++) {
-            cached = socketServerControl.cache(result.rows[i].socketid);
-
-            body.players.push({
-                player_id: result.rows[i].playerid,
-                player_name: result.rows[i].playername,
-                character_name: result.rows[i].charactername,
-                player_type: result.rows[i].playertype,
-                colour: result.rows[i].colour,
-                size: result.rows[i].size,
-                speed: {
-                    walk : result.rows[i].speed
-                },
-                initiative: cached && cached.initiative
-            });
+        item = socketServerControl.cache(k);
+        // No longer exists, clean it up.
+        if (!item) {
+            delete cached[k];
+            continue;
         }
-
-        res.writeHead(200, { "Content-Type" : "application/json" });
-
-        res.write(JSON.stringify(body));
-        res.end();
-    });
+        if (params.player_type && params.player_type !== item.player_type) {
+            continue;
+        }
+        body.players.push(item);
+    }
+    return serveJSON(res, body);
 };
 
 /**
@@ -345,7 +341,7 @@ function postSession(req, res) {
                     return serveError();
                 }
                 body = { session_id: result.rows[0].websessionid };
-                socketServerControl.broadcastJSON(body);
+                socketServerControl.broadcastJSON(body, [req.body.socket_id]);
                 return serveJSON(res, body);
             });
         } else {
@@ -405,9 +401,9 @@ function getIndex(req, res) {
             sessionScript = `
 <script type="application/javascript">window.sessionId = ${result.rows[0].websessionid};</script>
             `;
-
             content = sessionScript + fs.readFileSync("template/index.html");
         }
+        
         html = mustache.render(body.toString(), {
             bootstrap: sessionScript || "",
             content: content,
