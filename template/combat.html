@@ -88,20 +88,24 @@ loadExternalScript("public/combatMap.js");
             <select id="npcSize" name="npcSize"></select>
             <div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed" name="npcSpeed" placeholder="30" />
-                    <label class="number" for="npcSpeed">WALK</label>
+                    <input type="number" id="npcSpeed-walk" name="npcSpeed-walk" placeholder="30" />
+                    <label class="number" for="npcSpeed-walk">WALK</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="0" />
+                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="15" />
                     <label class="number" for="npcSpeed-swim">SWIM</label>
                 </div>
                 <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="0   " />
+                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="15" />
                     <label class="number" for="npcSpeed-climb">CLIMB</label>
                 </div>
                 <div class="ctrl-labelledNumber">
                     <input type="number" id="npcSpeed-fly" name="npcSpeed-fly" placeholder="0" />
                     <label class="number" for="npcSpeed-fly">FLY</label>
+                </div>
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="npcSpeed-burrow" name="npcSpeed-burrow" placeholder="0" />
+                    <label class="number" for="npcSpeed-burrow">DIG</label>
                 </div>
             </div>
             <button class="ctrl-flat" name="addNpc">ADD</button>
@@ -273,7 +277,15 @@ loadExternalScript("public/combatMap.js");
      * Set up for the start of combat.
      */
     onCombatStart = function() {
-        initiativeContext.toggleReaction(window.playerId, true);
+        var i, ids;
+        if (document.body.hasAttribute("data-isDm")) {
+            ids = initiativeContext.listNpcIds();
+            for (i = 0; i < ids.length; i++) {
+                initiativeContext.toggleReaction(ids[i], true);
+            }
+        } else {
+            initiativeContext.toggleReaction(window.playerId, true);
+        }
     };
 
     /**
@@ -660,6 +672,9 @@ loadExternalScript("public/combatMap.js");
                     }
                 }
                 renderMenu();
+                if (document.body.hasAttribute("data-isDM")) {
+                    onCombatStart();
+                }
                 initiativeContext.onListEvent("react", onReactClicked);
                 return true;
             }
@@ -942,9 +957,9 @@ loadExternalScript("public/combatMap.js");
                 initiative : init,
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {
-                    walk : parseInt(document.querySelector("[name='npcSpeed']").value) || 30,
+                    walk : parseInt(document.querySelector("[name='npcSpeed-walk']").value) || 30,
                     swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 0,
-                    climb: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0,
+                    climb: parseInt(document.querySelector("[name='npcSpeed-climb']").value) || 0,
                     fly: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0
                 },
                 id : (new Date()).valueOf().toString()

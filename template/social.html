@@ -1,7 +1,18 @@
 <div>Waiting for DM</div>
 <ol class="initiativeList"></ol>
 <script id="template-initiativeListItem" type="text/html">
-<li class="mob" data-id="" data-mobType="" data-initiative="" data-speed="" data-reacted>
+<li
+    class="mob"
+    data-id=""
+    data-mobType=""
+    data-initiative=""
+    data-walk=""
+    data-swim=""
+    data-climb=""
+    data-fly=""
+    data-burrow=""
+    data-reacted
+>
     <span class="initiativeScore"></span>
     <span class="mobName"></span>
     <button name="position">@</button>
@@ -83,7 +94,11 @@ window.initiativeContext = {};
         result.potential = parseInt(li.getAttribute("data-potential"));
         result.order = parseInt(li.getAttribute("data-order"));
         result.speed = {
-            walk : parseInt(li.getAttribute("data-speed"))
+            walk : parseInt(li.getAttribute("data-walk")),
+            swim : parseInt(li.getAttribute("data-swim")),
+            fly : parseInt(li.getAttribute("data-fly")),
+            climb : parseInt(li.getAttribute("data-climb")),
+            burrow : parseInt(li.getAttribute("data-burrow"))
         };
         return result;
     };
@@ -222,7 +237,23 @@ window.initiativeContext = {};
         li.setAttribute("data-id", data.id);
         li.setAttribute("data-mobType", data.mob_type || (isNaN(data.player_id) ? "npc" : "pc"));
 
-        if (data.speed) { li.setAttribute("data-speed", data.speed.walk); }
+        if (data.speed) {
+            if (data.speed.walk) {
+                li.setAttribute("data-walk", data.speed.walk);
+            }
+            if (data.speed.swim) {
+                li.setAttribute("data-swim", data.speed.swim);
+            }
+            if (data.speed.climb) {
+                li.setAttribute("data-climb", data.speed.climb);
+            }
+            if (data.speed.fly) {
+                li.setAttribute("data-fly", data.speed.fly);
+            }
+            if (data.speed.burrow) {
+                li.setAttribute("data-burrow", data.speed.burrow);
+            }
+        }
         if (data.colour) { li.style.color = "#" + data.colour; }
         if (data.size) { li.setAttribute("data-size", data.size); }
         if (data.character_name) { li.querySelector(".mobName").innerHTML = data.character_name; }
@@ -340,6 +371,7 @@ window.initiativeContext = {};
     window.socket.addEventListener("message", onReceiveMessage);
     window.initiativeContext.addMob = addPlayer;
     window.initiativeContext.removeMob = removePlayer;
+    window.initiativeContext.refreshList =refreshList;
 
     /**
      * Removes any NPCs from the list, but keeps players.
@@ -420,6 +452,20 @@ window.initiativeContext = {};
             return null;
         }
         return liToData(el);
+    };
+
+    /**
+     * Gets the ids of each NPC in the current combat.
+     * @returns {array of string} The ids.
+     */
+    window.initiativeContext.listNpcIds = function() {
+        var result, els, i;
+        els = _listEl.querySelectorAll("[data-mobType='npc']");
+        result = [];
+        for (i = 0; i < els.length; i++) {
+            result.push(els[i].getAttribute("data-id"));
+        }
+        return result;
     };
 
     /**

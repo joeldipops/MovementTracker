@@ -1,19 +1,48 @@
 <h1>Welcome</h1>
-<label>Your Name</label><input type="text" name="playerName" />
-<fieldset id="dmOptions">
+<input class="ctrl-textBox" type="text" name="playerName" placeholder="ENTER YOUR NAME" />
+<fieldset class="form" id="dmOptions">
     <legend>DM the game</legend>
     <div class="hidden">DM Already Set</div>
-    <button name="start" data-player_type="dm" disabled>Start</button>
+    <button class="ctrl-thickButton" name="start" data-player_type="dm" disabled>GO</button>
 </fieldset>
-<fieldset id="playerOptions">
-    <legend>OR Set up your character</legend>
-    <label>Character's Name</label> <input type="text" name="characterName" />
-    <label>Race</label>
-        <!-- TODO: proper, dynamic list of races. -->
+<fieldset class="form" id="playerOptions">
+    <legend>OR set up your character</legend>
+    <div>
+        <input class="ctrl-textBox" type="text" name="characterName" placeholder="CHARACTER NAME" />
+        <input type="hidden" name="race" value="human" />
+    </div>
+    <!--
+    <div>
+        <label>Race</label>
+        <!-- TODO: proper, dynamic list of races. --\>
         <label for="race-human">Human</label><input id="race-human" type="radio" name="race" value="human" checked />
-    <label>Walk Speed</label> <input type="number" name="speed" value="30" />
+    </div>
+    -->
+    <div>
+        <legend>Movement Speed</legend>
+        <div class="ctrl-labelledNumber">
+            <input type="number" name="walk" value="30" />
+            <label>WALK</label>
+        </div>
+        <div class="ctrl-labelledNumber">
+            <input type="number" name="swim" value="15" />
+            <label>SWIM</label>
+        </div>
+        <div class="ctrl-labelledNumber">
+            <input type="number" name="climb" value="15" />
+            <label>CLIMB</label>
+        </div>
+        <div class="ctrl-labelledNumber">
+            <input type="number" name="fly" value="0" />
+            <label>FLY</label>
+        </div>
+        <div class="ctrl-labelledNumber">
+            <input type="number" name="burrow" value="0" />
+            <label>DIG</label>
+        </div>
+    </div>
     <div class="ctrl-colourOption">
-        <label>Colour</label>
+        <legend>Colour</legend>
         <input type="radio" id="red" value="FF0000" name="colour" checked />
         <label for="red">&nbsp;</label>
 
@@ -34,12 +63,13 @@
 
         <input type="radio" id="yellow" value="FFFF00" name="colour" />
         <label for="yellow">&nbsp;</label>
-        <input type="text" name="colour" />
+        <input class="ctrl-textBox" type="text" name="colour" placeholder="CUSTOM" />
     </div>
-    <button name="start" data-player_type="player" disabled>Start</button>
+    <button class="ctrl-thickButton" name="start" data-player_type="player" disabled>GO</button>
 </fieldset>
-<fieldset>
-   <button name="start" data-player_type="spectator">Spectate</button>
+<fieldset class="form">
+    <legend>OR spectate</legend>
+    <button class="ctrl-thickButton" name="start" data-player_type="spectator">GO</button>
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
@@ -101,7 +131,13 @@
             body.colour = mainEl.querySelector("[name='colour'][type='text']").value ||
                 mainEl.querySelector("input[name='colour']:checked").value;
             body.colour = body.colour.replace("#", "");
-            body.speed = parseInt(mainEl.querySelector("[name='speed']").value);
+            body.speed = {
+                walk : parseInt(mainEl.querySelector("[name='walk']").value),
+                swim : parseInt(mainEl.querySelector("[name='swim']").value),
+                fly: parseInt(mainEl.querySelector("[name='fly']").value),
+                climb: parseInt(mainEl.querySelector("[name='climb']").value),
+                burrow: parseInt(mainEl.querySelector("[name='burrow']").value)
+            };
         }
 
         // Create the session if needed, then upload the new player.
@@ -115,9 +151,10 @@
                 return sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
             });
         }
+        result = runAsync([result, initiativeContext.refreshList()]);
 
         result.then(function(result) {
-            var result = JSON.parse(result.responseText);
+            var result = JSON.parse(result[0].responseText);
             window.playerId = result.player_id.toString();
             switch(body.player_type) {
                 case "dm":

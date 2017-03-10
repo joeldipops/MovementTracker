@@ -192,6 +192,10 @@
         fly : {
             text : "FLY",
             factor: 0
+        },
+        burrow: {
+            text : "BURROW",
+            factor: 0
         }
     };
 

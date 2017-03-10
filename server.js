@@ -153,7 +153,7 @@ function putPlayer(req, res) {
         req.body.character_name,
         req.body.player_type,
         req.body.colour,
-        req.body.speed
+        req.body.speed ? req.body.speed.walk : null
     ];
 
     if(playerId) {
@@ -178,9 +178,7 @@ function putPlayer(req, res) {
             player_type : req.body.player_type,
             colour: req.body.colour,
             size : req.body.size || "medium",
-            speed : {
-                walk : req.body.speed
-            }
+            speed : req.body.speed
         });
         cached = {};
         cached[req.body.socket_id] = true;

@@ -16,6 +16,18 @@ input[type='number'] {
         margin: 0;
     }
 
+.form .ctrl-thickButton {
+    margin-left: 0;
+}
+
+.form legend {
+    margin-top: 10px;
+    margin-bottom: 3px;
+}
+
+
+
+
 .ctrl-labelledNumber {
     position: relative;
     display: inline-block;
@@ -184,6 +196,14 @@ body {
     display: block;
     height: 2rem;
     width: 100%;
+    margin: 1px;
+    text-align: center;
+}
+
+.ctrl-textBox {
+    display: block;
+    height: 2rem;
+    width: 300px;
     margin: 1px;
     text-align: center;
 }
