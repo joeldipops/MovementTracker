@@ -142,16 +142,21 @@
 
         // Create the session if needed, then upload the new player.
         if (window.sessionId) {
-            result = sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
+            result = runAsync([
+                sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body),
+                initiativeContext.refreshList()
+            ]);
         } else {
             result = sendHttpRequest("session", "POST", {})
             .then(function(result) {
                 var data = JSON.parse(result.responseText || null);
                 window.sessionId = data.session_id;
-                return sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body);
+                return runAsync([
+                    sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body),
+                    initiativeContext.refreshList()
+                ]);
             });
         }
-        result = runAsync([result, initiativeContext.refreshList()]);
 
         result.then(function(result) {
             var result = JSON.parse(result[0].responseText);
@@ -159,7 +164,7 @@
             switch(body.player_type) {
                 case "dm":
                     document.body.setAttribute("data-isDm", "isDm");
-                    return replaceBody("dm_console");
+                    return replaceBody("play");
                 case "player":
                     return replaceBody("ready");
                 default:

@@ -22,7 +22,6 @@ server.get("/", getIndex);
 server.get("/page/home", getIndex);
 server.get("/page/play", getPlayPage);
 server.get("/page/ready", getReadyPage);
-server.get("/page/dm_console", getDmConsolePage);
 server.put(/session\/[0-9]+\/player\/[0-9]+\/ready/, readyPlayer);
 server.put(/session\/[0-9]+\/player\/[0-9]+\/move/, movePlayer);
 server.put(/session\/[0-9]+\/player\/[0-9]+\/remove/, removePlayerFromCombat);
@@ -377,11 +376,6 @@ function getPlayPage(req, res) {
 
 function getReadyPage(req, res) {
     var content = fs.readFileSync("template/ready.html");
-    return serveHtml(res, content);
-};
-
-function getDmConsolePage(req, res) {
-    var content = fs.readFileSync("template/dmSetup.html");
     return serveHtml(res, content);
 };
 

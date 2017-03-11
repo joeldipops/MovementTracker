@@ -1,4 +1,4 @@
-.hidden { display: none; }
+.hidden { display: none !important; }
 :focus {outline:none;}
 ::-moz-focus-inner {border:0;}
 
@@ -231,7 +231,6 @@ body {
         vertical-align: middle;
     }
     .initiativeList > li > .initiativeScore { display: none; }
-    /* TODO Implement reactions & remove !important directive. */
     .initiativeList > li > [name='react'] { display: none; }
     .initiativeList > li > [name='position'] { display: none; }
     .initiativeList > li > [name='toggleMob'] { display: none; }

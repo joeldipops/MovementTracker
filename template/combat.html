@@ -43,9 +43,9 @@ loadExternalScript("public/combatMap.js");
     <button class="ctrl-flat" name="start">Start</button>
     <button class="ctrl-flat" name="clear">Clear</button>
     <button class="ctrl-flat" name="reset">Quit</button>
-    <div class="ctrl-tabSet" id="dmControlTabs" data-tabs="4">
+    <div class="ctrl-tabSet" id="dmControlTabs" data-tabs="3">
         <input type="radio" name="controlTab" id="turnControlsTab" />
-        <label for="turnControlsTab">TURN</label>
+        <label class="hidden" for="turnControlsTab">TURN</label>
         <fieldset id="turnOptions">
             <legend></legend>
             <div class="ctrl-speedOptions"></div>
@@ -137,8 +137,10 @@ loadExternalScript("public/combatMap.js");
 <script type="application/javascript">
 (function combatScript() {
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement,
-        onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart,
-        onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove, onMoveSelected, onReactClicked,
+        onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
+        onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
+        onMoveSelected, onReactClicked, onPositionClicked,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap,
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -563,6 +565,8 @@ loadExternalScript("public/combatMap.js");
             pageContext.removeMob(mob);
         }
 
+        initiativeContext.addMob(arguments[0])
+
         x = parseInt(location.getAttribute("data-x"));
         y = parseInt(location.getAttribute("data-y"));
 
@@ -648,55 +652,87 @@ loadExternalScript("public/combatMap.js");
     };
     onEvent(window.socket, "message", onReceiveMessage);
 
-    runAsync([
-        // Get the current state of the map.
-        sendHttpRequest("session/" + window.sessionId + "/map", "GET"),
-        // Get the current turn.
-        sendHttpRequest("session/" + window.sessionId + "/turn", "GET")
-    ])
-    .then(function(response) {
+    /**
+     * When the DM first hits this page, or clicks "Clear" put the menu in setup mode.
+     */
+    onSetupStart = function() {
+        var el;
+        document.body.setAttribute("data-state", "setup");
+        if (el = _menuEl.querySelector("#dmControlTabs")) {
+            el.setAttribute("data-tabs", 3);
+            el = el.querySelector("[for='turnControlsTab']")
+            el.classList.add("hidden");
+        }
         wait(function() {
-            var data, turnId;
-            if (pageContext.renderMap) {
-                data = {
-                    map :JSON.parse(response[0].responseText || null),
-                    turn : JSON.parse(response[1].responseText || null)
-                };
-                if (data.map.width) {
-                    updateMap(
-                        data.map,
-                        data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
-                    );
-                    if (document.body.hasAttribute("data-isDm")) {
-                        triggerNextTurn();
-                    }
-                }
+            if (pageContext.terrainTypes) {
                 renderMenu();
-                if (document.body.hasAttribute("data-isDM")) {
-                    onCombatStart();
-                }
-                initiativeContext.onListEvent("react", onReactClicked);
+                generateMap();
                 return true;
+            } else {
+                return false;
             }
-            return false;
         });
-    })
-    .catch(function() {
-        debugger;
-    });
+    };
 
-    document.body.setAttribute("data-state", "combat");
+    /**
+     * When ready to play, put the page in play mode if it's currently in setup mode.
+     */
+    onPlayStart = function() {
+        document.body.setAttribute("data-state", "combat");
+        runAsync([
+            // Get the current state of the map.
+            sendHttpRequest("session/" + window.sessionId + "/map", "GET"),
+            // Get the current turn.
+            sendHttpRequest("session/" + window.sessionId + "/turn", "GET")
+        ])
+        .then(function(response) {
+            var el;
+            wait(function() {
+                var data, turnId;
+                if (pageContext.renderMap) {
+                    data = {
+                        map :JSON.parse(response[0].responseText || null),
+                        turn : JSON.parse(response[1].responseText || null)
+                    };
+                    if (data.map.width) {
+                        updateMap(
+                            data.map,
+                            data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
+                        );
+                        if (document.body.hasAttribute("data-isDm")) {
+                            triggerNextTurn();
+                        }
+                    }
+                    renderMenu();
+                    if (el = _menuEl.querySelector("#dmControlTabs")) {
+                        el.setAttribute("data-tabs", 4);
+                        el = el.querySelector("[for='turnControlsTab']")
+                        el.classList.remove("hidden");
+                    }
+                    if (document.body.hasAttribute("data-isDM")) {
+                        onCombatStart();
+                    }
+                    initiativeContext.onListEvent("react", onReactClicked);
+                    return true;
+                }
+                return false;
+            });
+        })
+        .catch(function() {
+            debugger;
+        });
+    };
 
-    /******************************* DM FUNCTIONS ********************************/
-    var i,
-        clear, start, reset, renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap,
-        onPositionClicked,
-        controlsTemplate, mapCellTemplate;
+    if (document.body.hasAttribute("data-isDM")) {
+        onSetupStart();
+    } else {
+        onPlayStart();
+    }
 
     /**
      * Resets the map to a blank slate.
      */
-    clear = function(isSilent) {
+    onClearClicked = function(isSilent) {
         var map;
         pageContext.removeMapEvents();
         map = document.getElementById("map");
@@ -707,19 +743,20 @@ loadExternalScript("public/combatMap.js");
         }
         if (!isSilent) {
             sendHttpRequest("session/" + window.sessionId + "/map", "DELETE");
-            replaceBody("dm_console");
+            onSetupStart();
         }
     };
 
     /**
      * Uploads and broadcasts map, then takes you to the main screen.
      */
-    start = function() {
+    onStartClicked = function() {
         var requestBody;
+
         requestBody = pageContext.mapToJSON();
         sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
-            return replaceBody("play");
+            onPlayStart();
         })
         .catch(function(res) {
             if(res.status) {
@@ -733,7 +770,7 @@ loadExternalScript("public/combatMap.js");
     /**
      * Deletes the session and goes back to the lobby page.
      */
-    reset = function() {
+    onResetClicked = function() {
         if (window.sessionId) {
             sendHttpRequest("session/" + window.sessionId, "DELETE")
             .then(function(res) {
@@ -813,15 +850,17 @@ loadExternalScript("public/combatMap.js");
         
         // Notify all
         // TODO: WHEN Merge with dmSetup.js, ensure that request is only made during play.
-        sendHttpRequest(
-            "session/" + window.sessionId + "/player/" + data.id + "/move",
-            "PUT",
-            {
-                x : x, y: y,
-                character_name : data.character_name,
-                colour : data.colour
-            }
-        );
+        if (document.body.getAttribute("data-state") === "combat") {
+            sendHttpRequest(
+                "session/" + window.sessionId + "/player/" + data.id + "/move",
+                "PUT",
+                {
+                    x : x, y: y,
+                    character_name : data.character_name,
+                    colour : data.colour
+                }
+            );
+        }
         return true;
     };
 
@@ -869,11 +908,11 @@ loadExternalScript("public/combatMap.js");
         var width, height;
         width = parseInt(document.querySelector("[name='mapWidth']").value);
         height = parseInt(document.querySelector("[name='mapHeight']").value);
-        clear(true);
+        onClearClicked(true);
         pageContext.renderMap({
             width: width,
             height: height
-        }, mapCellTemplate);
+        }, _template);
     };
 
     /**
@@ -976,7 +1015,6 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.onListEvent("position", onPositionClicked);
 
         // When in set up mode, deleting an NPC gets rid of it completely.
-        // TODO When marging with dmSetup, don't broadcast until combat has started.
         initiativeContext.onListEvent("toggleMob", function(data) {
             pageContext.removeMapEvents();
             pageContext.removeMob(data);
@@ -986,10 +1024,12 @@ loadExternalScript("public/combatMap.js");
                 onPositionClicked(data);
             }
 
-            sendHttpRequest(
-                "session/" + window.sessionId + "/player/" + data.id + "/remove",
-                "PUT"
-            );
+            if (document.body.getAttribute("data-state") === "combat") {
+                sendHttpRequest(
+                    "session/" + window.sessionId + "/player/" + data.id + "/remove",
+                    "PUT"
+                );
+            }
         });
         
         // When terrain type is selected, we can add a terrain to a cell.
@@ -1001,11 +1041,11 @@ loadExternalScript("public/combatMap.js");
         onEvent("[name='mapWidth']", "change", generateMap);
         onEvent("[name='mapHeight']", "change", generateMap);
 
-        onEvent("button[name='clear']", "click", clear.bind({}, false));
+        onEvent("button[name='clear']", "click", onClearClicked.bind({}, false));
 
-        onEvent("button[name='start']", "click", start);
+        onEvent("button[name='start']", "click", onStartClicked);
 
-        onEvent("button[name='reset']", "click", reset);
+        onEvent("button[name='reset']", "click", onResetClicked);
     };
     
 })();
