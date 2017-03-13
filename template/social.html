@@ -349,7 +349,7 @@ window.initiativeContext = {};
         li.classList.add("currentTurn");
         fireEvent(li, "turn_start");
     };
-    
+
     /**
      * Returns the li of the next turn.
      * @returns {HTMLElement} the list of the mob who has the next turn.
@@ -467,6 +467,17 @@ window.initiativeContext = {};
         }
         return result;
     };
+
+    /**
+     * Puts the initiative order back to the beginning.
+     */
+    window.initiativeContext.resetTurns = function() {
+        var i, els;
+        els = _listEl.getElementsByClassName("currentTurn");
+        for (i = 0; i < els.length; i++) {
+            els[i].classList.remove("currentTurn");
+        }
+    }
 
     /**
      * Reorders the list based on initiative.

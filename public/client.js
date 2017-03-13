@@ -9,7 +9,7 @@ pageContext = {};
 var a = function() {
     var _pageEvents, _pendingPromises, _pendingTimeouts,
         evaluateScripts, toQueryString, socketControl, nativeParseInt, nativeSetTimeout;
-    _pageEvents = [];
+    _pageEvents = {};
     _pendingCancelFlags = [];
     _pendingTimeouts = [];
 
@@ -29,25 +29,58 @@ var a = function() {
         if (timeout) {
             setTimeout(hideAlert, timeout);
         }
+        return hideAlert;
     }
 
     /**
-     * Keeps track of page-level events so they can be unbound later. 
+     * Keeps track of page-level events so they can be unbound later.
      * @param {EventTarget|string} target to bind event or selector.
      * @param {string} event name of event.
      * @param {function} callback when event is fired.
+     * @param {string} namespace Allows events to be unbound as a group.
      */
-    onEvent = function(target, event, handler) {
+    onEvent = function(target, event, handler, namespace) {
         var i;
+        namespace = namespace || "default";
         if (typeof target === "string") {
             target = document.querySelectorAll(target);
         }
         if (!target.length) {
             target = [target];
         }
+        if (!_pageEvents[namespace]) {
+            _pageEvents[namespace] = [];
+        }
+
         for (i = 0; i < target.length; i++) {
             target[i].addEventListener(event, handler);
-            _pageEvents.push(target[i].removeEventListener.bind(target[i], event, handler));
+            _pageEvents[namespace].push(target[i].removeEventListener.bind(target[i], event, handler));
+        }
+    };
+
+    /**
+     * Cleans up events within the provided namespace.
+     * @param {string} namespace The namespace.
+     */
+    offEvents = function(namespace) {
+        var i, k;
+        if (!namespace) {
+            for (k in _pageEvents) {
+                if (!_pageEvents.hasOwnProperty(k)) {
+                    continue;
+                }
+                for(i = 0; i < _pageEvents[k].length; i++) {
+                    _pageEvents[k][i]();
+                }
+            }
+            _pageEvents = {};
+        } else if (!_pageEvents[namespace]) {
+            return;
+        } else {
+            for (i = 0; i < _pageEvents[namespace].length; i++) {
+                _pageEvents[namespace][i]();
+            }
+            delete _pageEvents[namespace];
         }
     };
 
@@ -55,19 +88,16 @@ var a = function() {
      * Cleans up a page when it is no longer needed.
      */
     closePage = function() {
-       var i;
-       for(i = 0; i < _pageEvents.length; i++) {
-           _pageEvents[i]();
-       }
-       _pageEvents.length = 0;
-       for (i = 0; i < _pendingCancelFlags.length; i++) {
-           _pendingCancelFlags[i].value = true;
-       }
-       _pendingCancelFlags.length = 0;
-       for (i = 0; i < _pendingTimeouts.length; i++) {
-           clearTimeout(_pendingTimeouts[i]);
-       }
-       pageContext = {};
+        var k, i;
+        offEvents();
+
+        for (i = 0; i < _pendingCancelFlags.length; i++) {
+            _pendingCancelFlags[i].value = true;
+        }
+        _pendingCancelFlags.length = 0;
+        for (i = 0; i < _pendingTimeouts.length; i++) {
+            clearTimeout(_pendingTimeouts[i]);
+        }
     };
 
     /**
@@ -120,9 +150,13 @@ var a = function() {
      */
     nativeSetTimeout = window.setTimeout;
     setTimeout = function(fn, timeout, context) {
-        var timerId;
+        var timerId, i;
         fn = context ? fn.bind(context) : fn;
-        timerId = nativeSetTimeout(fn, timeout);
+        timerId = nativeSetTimeout(function() {
+            fn();
+            _pendingTimeouts = _pendingTimeouts.splice(i, 1);
+        }, timeout);
+        i = _pendingTimeouts.length;
         _pendingTimeouts.push(timerId);
         return timerId;
     };

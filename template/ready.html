@@ -1,32 +1,35 @@
-<aside class="ctrl-modal_" id="initiativeModal">
-    <div>&nbsp;</div>
-    <section class="ctrl-modal_">
-        <label for="initiative">Enter initiative to begin.</label>
-        <input type="number" id="initiative" name="initiative" />
-        <button name="ready">Ready</button>
-    </section>
-</aside>
+<script id="template-initiativeSetup" type="text/html">
+    <h2>Roll For Initiative</h2>
+    <div class="centre">
+        <div class="ctrl-labelledNumber center">
+            <label for="initiative">INIT</label>
+            <input type="number" id="initiative" name="initiative" placeholder="0" />
+        </div>
+    </div>
+    <button class="ctrl-flat" name="ready">READY</button>
+</script>
 <script type="application/javascript">
 (function readyScript() {
-    var onReady;
+    var onReady, hideAlert;
 
     /**
      * Handles transition to combat once initiative is entered.
      */
     onReady = function(event) {
         var init, modal;
-        init = parseInt(mainEl.querySelector("[name='initiative']").value);
+        init = parseInt(document.getElementById("initiative").value);
         if (isNaN(init)) {
             // TODO show validation.
             return;
         }
-
+        hideAlert();
         runAsync([
             // Set initiative.
             sendHttpRequest("session/" + window.sessionId + "/player/" + window.playerId + "/ready", "PUT", { initiative : init }),
             replaceBody("play")
         ]);
     };
+    hideAlert = showAlert(document.getElementById("template-initiativeSetup").innerHTML);
     onEvent("[name='ready']", "click", onReady);
     document.body.setAttribute("data-state", "combat");
 })();

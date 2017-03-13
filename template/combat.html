@@ -140,7 +140,7 @@ loadExternalScript("public/combatMap.js");
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
         onMoveSelected, onReactClicked, onPositionClicked,
-        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob,
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -189,8 +189,8 @@ loadExternalScript("public/combatMap.js");
      */
     onMoveSelected = function(data) {
         pageContext.removeMapEvents();
-        pageContext.onMapEvent("td > .terrain", "mouseover", onTerrainMouseOver.bind({}, data));
-        pageContext.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data));
+        pageContext.onMapEvent("td > .terrain", "mouseover", onTerrainMouseOver.bind({}, data), "turn");
+        pageContext.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data), "turn");
     };
 
     /**
@@ -261,7 +261,7 @@ loadExternalScript("public/combatMap.js");
         }
         // Auto select walk.
         el.querySelector("[name='movementType'][value='walk']").checked = true;
-        onEvent("[name='movementType']", "click", onMoveSelected.bind({}, data));
+        onEvent("[name='movementType']", "click", onMoveSelected.bind({}, data), "turn");
     }
 
     /**
@@ -296,6 +296,7 @@ loadExternalScript("public/combatMap.js");
      */
     onTurnStart = function(data) {
         var message, el;
+        offEvents("turn");
         pageContext.removeMapEvents();
         message = "<h1>" + data.character_name + "s Turn</h1>";
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
@@ -699,9 +700,6 @@ loadExternalScript("public/combatMap.js");
                             data.map,
                             data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
                         );
-                        if (document.body.hasAttribute("data-isDm")) {
-                            triggerNextTurn();
-                        }
                     }
                     renderMenu();
                     if (el = _menuEl.querySelector("#dmControlTabs")) {
@@ -721,6 +719,16 @@ loadExternalScript("public/combatMap.js");
         .catch(function() {
             debugger;
         });
+    };
+
+    /**
+     * Reset page between setup and combat mode.
+     */
+    resetEvents = function() {
+        closePage();
+        initiativeContext.offListEvent("react", onReactClicked);
+        initiativeContext.offListEvent("position", onPositionClicked);
+        initiativeContext.offListEvent("toggleMob", toggleMob);
     };
 
     if (document.body.hasAttribute("data-isDM")) {
@@ -756,7 +764,12 @@ loadExternalScript("public/combatMap.js");
         requestBody = pageContext.mapToJSON();
         sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
+            resetEvents();
             onPlayStart();
+            if (document.body.hasAttribute("data-isDm")) {
+                initiativeContext.resetTurns();
+                triggerNextTurn();
+            }
         })
         .catch(function(res) {
             if(res.status) {
@@ -952,12 +965,34 @@ loadExternalScript("public/combatMap.js");
         }
         showAlert(_reactTemplate.replace("{message}", message), 1000);
     };
+    
+    /**
+     * Shows or hides an existing mob from the map.
+     * @param {object} data Describes the mob.
+     */
+    toggleMob = function(data) {
+        pageContext.removeMapEvents();
+        pageContext.removeMob(data);
+        if (data.mob_type === "npc") {
+            initiativeContext.removeMob(data);
+        } else {
+            onPositionClicked(data);
+        }
+
+        if (document.body.getAttribute("data-state") === "combat") {
+            sendHttpRequest(
+                "session/" + window.sessionId + "/player/" + data.id + "/remove",
+                "PUT"
+            );
+        }
+    };
 
     /**
      * Renders controls in the menu container.
      */
     renderDMMenu = function() {
         var menu, el, i, option, template;
+
         template = document.getElementById("template-dmControls").innerHTML;
         _menuEl.insertAdjacentHTML("beforeend", template);
 
@@ -989,7 +1024,7 @@ loadExternalScript("public/combatMap.js");
                 return;
             }
 
-            init = parseInt(document.querySelector("[name='npcInitiative']").value) || 0;
+            init = parseInt(document.querySelector("[name='npcInitiative']").value) || 1;
 
             data = {
                 character_name : name,
@@ -1015,22 +1050,7 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.onListEvent("position", onPositionClicked);
 
         // When in set up mode, deleting an NPC gets rid of it completely.
-        initiativeContext.onListEvent("toggleMob", function(data) {
-            pageContext.removeMapEvents();
-            pageContext.removeMob(data);
-            if (data.mob_type === "npc") {
-                initiativeContext.removeMob(data);
-            } else {
-                onPositionClicked(data);
-            }
-
-            if (document.body.getAttribute("data-state") === "combat") {
-                sendHttpRequest(
-                    "session/" + window.sessionId + "/player/" + data.id + "/remove",
-                    "PUT"
-                );
-            }
-        });
+        initiativeContext.onListEvent("toggleMob", toggleMob);
         
         // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {

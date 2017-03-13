@@ -73,8 +73,7 @@
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
-    var onClickStart, onMessageReceived, onChangeInput,
-        hideDmButton, buttons, inputs, i;
+    var onClickStart, onMessageReceived, onChangeInput, hideDmButton;
 
     document.body.setAttribute("data-state", "lobby");
 
@@ -189,6 +188,7 @@
     };
 
     wait(function() {
+        var buttons, inputs, i;
         if (mainEl) {
             inputs = mainEl.querySelectorAll("input");
             for (i = 0; i < inputs.length; i++) {

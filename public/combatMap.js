@@ -124,8 +124,9 @@
      * @param {string} selector querySelectorAll parameter.
      * @param {string} event name of the event.
      * @param {function} handler event handler function.
+     * @param {string} namespace Allows events to be unbound as a group.
      */
-    pageContext.onMapEvent = function(selector, event, handler) {
+    pageContext.onMapEvent = function(selector, event, handler, namespace) {
         var target, i;
         target = _mapEl.querySelectorAll(selector);
         if (!target || !target.length) {
@@ -134,7 +135,7 @@
 
         // Ensure these will also get cleaned up on page change.
         for (i = 0; i < target.length; i++) {
-            onEvent(target[i], event, handler);
+            onEvent(target[i], event, handler, namespace);
             _mapEvents.push(target[i].removeEventListener.bind(target[i], event, handler));
         }
     };
@@ -143,10 +144,11 @@
      * Removes all events bound with onMapEvent.
      */
     pageContext.removeMapEvents = function() {
-       var i;
-       for(i = 0; i < _mapEvents.length; i++) {
-           _mapEvents[i]();
-       }
+        var i;
+        for(i = 0; i < _mapEvents.length; i++) {
+            _mapEvents[i]();
+        }
+        _mapEvents = [];
     };
 
     pageContext.terrainTypes = {

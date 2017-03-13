@@ -25,26 +25,30 @@ input[type='number'] {
     margin-bottom: 3px;
 }
 
-
-
-
 .ctrl-labelledNumber {
     position: relative;
     display: inline-block;
 }
-.ctrl-labelledNumber > input {
-    font-size: x-large;
-}
-.ctrl-labelledNumber > label {
-    width: 3rem;
-    left: 0;
-    position: absolute;
-    top: 2px;
-    text-align: center;
-    font-size: small;
-    font-weight: bold;
-    padding: 0 3px;
-}
+
+    .centre > .ctrl-labelledNumber {
+        text-align: center;
+        display: block;
+        margin: 0 auto;
+        width: 3rem;
+    }
+    .ctrl-labelledNumber > input {
+        font-size: x-large;
+    }
+    .ctrl-labelledNumber > label {
+        width: 3rem;
+        left: 0;
+        position: absolute;
+        top: 2px;
+        text-align: center;
+        font-size: small;
+        font-weight: bold;
+        padding: 0 3px;
+    }
 
 /** Main Layout **/
 body {
