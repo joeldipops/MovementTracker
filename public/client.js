@@ -169,6 +169,11 @@ var a = function() {
      */
     newPromise = function(callback) {
         var innerPromise, resultPromise, cancelFlag;
+        // resolve immediately;
+        if (!callback) {
+            return new Promise(function(resolve) { resolve(); });
+        }
+
         // When cancelled, promise will no longer fire.
         cancelFlag = { value : false };
         _pendingCancelFlags.push(cancelFlag);
@@ -263,15 +268,16 @@ var a = function() {
                     reject(this);
                 }
             });
-            if (data && (method === "GET" || method === "DELETE")) {
+            data = data || {};
+            data.session_id = window.sessionId;
+            data.socket_id = window.socketId;
+            if (method === "GET" || method === "DELETE") {
                 url += toQueryString(data);
             }
             request.open(method, url);
-            if (data && (method === "PUT" || method === "POST")) {
+            if (method === "PUT" || method === "POST") {
                 type = options.type || "application/json";
                 request.setRequestHeader("Content-Type", type);
-                data.session_id = window.sessionId;
-                data.socket_id = window.socketId;
                 data = JSON.stringify(data);
                 request.send(data);
             } else {

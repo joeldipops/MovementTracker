@@ -266,12 +266,15 @@ loadExternalScript("public/combatMap.js");
 
     /**
      * Determines who has the next turn and broadcasts to everyone.
+     * @returns {Promise} resolves when turn has been updated at the backend.
      */
     triggerNextTurn = function() {
         var id;
         if (id = initiativeContext.getNext()) {
-            sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
             pageContext.removeMapEvents();
+            return sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
+        } else {
+            return newPromise();
         }
     };
 
@@ -761,16 +764,15 @@ loadExternalScript("public/combatMap.js");
      */
     onStartClicked = function() {
         var requestBody;
-
         requestBody = pageContext.mapToJSON();
-        sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
+        initiativeContext.resetTurns();
+        runAsync([
+            triggerNextTurn(),
+            sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
+        ])
         .then(function() {
             resetEvents();
             onPlayStart();
-            if (document.body.hasAttribute("data-isDm")) {
-                initiativeContext.resetTurns();
-                triggerNextTurn();
-            }
         })
         .catch(function(res) {
             if(res.status) {
