@@ -298,7 +298,7 @@ loadExternalScript("public/combatMap.js");
         var message, el;
         offEvents("turn");
         pageContext.removeMapEvents();
-        message = "<h1>" + data.character_name + "s Turn</h1>";
+        message = "<h1>" + data.character_name + "'s Turn</h1>";
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
             // DM's turn for NPCs
             onMyTurnStart(data);
@@ -651,7 +651,6 @@ loadExternalScript("public/combatMap.js");
             }
         }
     };
-    onEvent(window.socket, "message", onReceiveMessage);
 
     /**
      * When the DM first hits this page, or clicks "Clear" put the menu in setup mode.
@@ -668,6 +667,7 @@ loadExternalScript("public/combatMap.js");
             if (pageContext.terrainTypes) {
                 renderMenu();
                 generateMap();
+                onEvent(window.socket, "message", onReceiveMessage);
                 return true;
             } else {
                 return false;
@@ -680,6 +680,7 @@ loadExternalScript("public/combatMap.js");
      */
     onPlayStart = function() {
         document.body.setAttribute("data-state", "combat");
+        onEvent(window.socket, "message", onReceiveMessage);
         runAsync([
             // Get the current state of the map.
             sendHttpRequest("session/" + window.sessionId + "/map", "GET"),
