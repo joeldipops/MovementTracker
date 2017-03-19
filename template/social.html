@@ -6,11 +6,6 @@
     data-id=""
     data-mobType=""
     data-initiative=""
-    data-walk=""
-    data-swim=""
-    data-climb=""
-    data-fly=""
-    data-burrow=""
     data-reacted
 >
     <span class="initiativeScore"></span>
@@ -83,7 +78,8 @@ window.initiativeContext = {};
      * @returns {object} The data as an object.
      */
     liToData = function(li) {
-        var result = {};
+        var k, result;
+        result = {};
         result = {};
         result.id = li.getAttribute("data-id");
         result.size = li.getAttribute("data-size");
@@ -93,13 +89,14 @@ window.initiativeContext = {};
         result.initiative = parseInt(li.getAttribute("data-initiative"));
         result.potential = parseInt(li.getAttribute("data-potential"));
         result.order = parseInt(li.getAttribute("data-order"));
-        result.speed = {
-            walk : parseInt(li.getAttribute("data-walk")),
-            swim : parseInt(li.getAttribute("data-swim")),
-            fly : parseInt(li.getAttribute("data-fly")),
-            climb : parseInt(li.getAttribute("data-climb")),
-            burrow : parseInt(li.getAttribute("data-burrow"))
-        };
+        result.speed = {};
+
+        for (k in MovementTracker.MOVEMENT_TYPES) {
+            if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(k)) {
+                continue;
+            }
+            result.speed[k] = parseInt(li.getAttribute("data-{type}".replace("{type}", k)));
+        }
         return result;
     };
 
@@ -238,20 +235,11 @@ window.initiativeContext = {};
         li.setAttribute("data-mobType", data.mob_type || (isNaN(data.player_id) ? "npc" : "pc"));
 
         if (data.speed) {
-            if (data.speed.walk) {
-                li.setAttribute("data-walk", data.speed.walk);
-            }
-            if (data.speed.swim) {
-                li.setAttribute("data-swim", data.speed.swim);
-            }
-            if (data.speed.climb) {
-                li.setAttribute("data-climb", data.speed.climb);
-            }
-            if (data.speed.fly) {
-                li.setAttribute("data-fly", data.speed.fly);
-            }
-            if (data.speed.burrow) {
-                li.setAttribute("data-burrow", data.speed.burrow);
+            for (i in data.speed) {
+                if (!data.speed.hasOwnProperty(i)) {
+                    continue;
+                }
+                li.setAttribute("data-" + i, data.speed[i]);
             }
         }
         if (data.colour) { li.style.color = "#" + data.colour; }

@@ -10,6 +10,12 @@ loadExternalScript("public/combatMap.js");
     <button class="terrain">&nbsp;</button>
 </td>
 </script>
+<script id="template-movementSetup" type="text/html">
+    <div class="ctrl-labelledNumber">
+        <input type="number" id="npcSpeed-{type}" name="npcSpeed-{type}" placeholder="{default}" />
+        <label class="number" for="npcSpeed-{type}">{display}</label>
+    </div>
+</script>
 <script id="template-movementOption" type="text/html">
     <input
         id="movementType-{type}"
@@ -86,28 +92,7 @@ loadExternalScript("public/combatMap.js");
             </div>
             <label for="npcSize">SIZE</label>
             <select id="npcSize" name="npcSize"></select>
-            <div>
-                <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-walk" name="npcSpeed-walk" placeholder="30" />
-                    <label class="number" for="npcSpeed-walk">WALK</label>
-                </div>
-                <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-swim" name="npcSpeed-swim" placeholder="15" />
-                    <label class="number" for="npcSpeed-swim">SWIM</label>
-                </div>
-                <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-climb" name="npcSpeed-climb" placeholder="15" />
-                    <label class="number" for="npcSpeed-climb">CLIMB</label>
-                </div>
-                <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-fly" name="npcSpeed-fly" placeholder="0" />
-                    <label class="number" for="npcSpeed-fly">FLY</label>
-                </div>
-                <div class="ctrl-labelledNumber">
-                    <input type="number" id="npcSpeed-burrow" name="npcSpeed-burrow" placeholder="0" />
-                    <label class="number" for="npcSpeed-burrow">DIG</label>
-                </div>
-            </div>
+            <div id="npcSpeed"></div>
             <button class="ctrl-flat" name="addNpc">ADD</button>
         </fieldset>
 
@@ -1006,16 +991,35 @@ loadExternalScript("public/combatMap.js");
 
         el = _menuEl.querySelector("#terrainOptions > ul[name='terrainTypes']");
         // Terrain type radio buttons.
+        option = document.getElementById("template-terrainType").innerHTML;
         for (i in MovementTracker.TERRAIN_TYPES) {
-            option = document.getElementById("template-terrainType").innerHTML;
-            option = option.replace(/{type}/g, i)
-                .replace(/{text}/g, MovementTracker.TERRAIN_TYPES[i].text);
-            el.insertAdjacentHTML("beforeend", option);
+            if (!MovementTracker.TERRAIN_TYPES.hasOwnProperty(i)) {
+                continue;
+            }
+            el.insertAdjacentHTML(
+                "beforeend",
+                option.replace(/{type}/g, i)
+                      .replace(/{text}/g, MovementTracker.TERRAIN_TYPES[i].text)
+            );
+        }
+
+        el = _menuEl.querySelector("#npcSpeed");
+        option = document.getElementById("template-movementSetup").innerHTML;
+        for (i in MovementTracker.MOVEMENT_TYPES) {
+            if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(i)) {
+                continue;
+            }
+            el.insertAdjacentHTML(
+                "beforeend",
+                option.replace(/{type}/g, i)
+                      .replace(/{default}/g, 30 * MovementTracker.MOVEMENT_TYPES[i].factor)
+                      .replace(/{display}/g, MovementTracker.MOVEMENT_TYPES[i].text)
+            );
         }
 
         // When add npc is clicked, we can select a cell to add them to.
         onEvent("button[name='addNpc']", "click", function() {
-            var name, init, size;
+            var name, init, size, k;
             name = document.querySelector("[name='npcName']").value;
             // Can't add NPC if missing info.
             if (!name) {
@@ -1028,14 +1032,17 @@ loadExternalScript("public/combatMap.js");
                 character_name : name,
                 initiative : init,
                 size : document.querySelector("[name='npcSize']").value,
-                speed : {
-                    walk : parseInt(document.querySelector("[name='npcSpeed-walk']").value) || 30,
-                    swim : parseInt(document.querySelector("[name='npcSpeed-swim']").value) || 0,
-                    climb: parseInt(document.querySelector("[name='npcSpeed-climb']").value) || 0,
-                    fly: parseInt(document.querySelector("[name='npcSpeed-fly']").value) || 0
-                },
+                speed : {},
                 id : (new Date()).valueOf().toString()
             };
+
+            for (k in MovementTracker.MOVEMENT_TYPES) {
+                if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(k)) {
+                    continue;
+                }
+                data.speed[k] = parseInt(document.querySelector("[name='npcSpeed-" + k + "']").value)
+                    || 30 * MovementTracker.MOVEMENT_TYPES[k].factor;
+            }
 
             initiativeContext.addMob(data);
 

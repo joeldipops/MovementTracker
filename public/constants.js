@@ -49,7 +49,7 @@
             factor: 0
         },
         burrow: {
-            text : "BURROW",
+            text : "DIG",
             factor: 0
         }
     };
@@ -61,5 +61,9 @@
         large : { text : "Large", tiles: 1, rank: 4 },
         huge : { text : "Huge", tiles: 1, rank: 5},
         colossal: { text: "Colossal", tiles: 1, rank: 6 }
+    };
+    
+    window.MovementTracker.RACIAL_TRAITS = {
+        human : { "walk" : 30 }
     };
 })();

@@ -1,3 +1,10 @@
+<script id="template-movementType" type="text/html">
+    <div class="ctrl-labelledNumber">
+        <input type="number" name="{type}" value="{value}" />
+        <label>{display}</label>
+    </div>
+</script>
+
 <h1>Welcome</h1>
 <input class="ctrl-textBox" type="text" name="playerName" placeholder="ENTER YOUR NAME" />
 <fieldset class="form" id="dmOptions">
@@ -18,28 +25,8 @@
         <label for="race-human">Human</label><input id="race-human" type="radio" name="race" value="human" checked />
     </div>
     -->
-    <div>
+    <div id="movementSetup">
         <legend>Movement Speed</legend>
-        <div class="ctrl-labelledNumber">
-            <input type="number" name="walk" value="30" />
-            <label>WALK</label>
-        </div>
-        <div class="ctrl-labelledNumber">
-            <input type="number" name="swim" value="15" />
-            <label>SWIM</label>
-        </div>
-        <div class="ctrl-labelledNumber">
-            <input type="number" name="climb" value="15" />
-            <label>CLIMB</label>
-        </div>
-        <div class="ctrl-labelledNumber">
-            <input type="number" name="fly" value="0" />
-            <label>FLY</label>
-        </div>
-        <div class="ctrl-labelledNumber">
-            <input type="number" name="burrow" value="0" />
-            <label>DIG</label>
-        </div>
     </div>
     <div class="ctrl-colourOption">
         <legend>Colour</legend>
@@ -73,7 +60,7 @@
 </fieldset>
 <script type="application/javascript">
 (function indexScript() {
-    var onClickStart, onMessageReceived, onChangeInput, hideDmButton;
+    var onClickStart, onMessageReceived, onChangeInput, hideDmButton, renderMovement;
 
     document.body.setAttribute("data-state", "lobby");
 
@@ -88,12 +75,42 @@
         return true;
     };
 
+    /**
+     * Renders each control for movement/speed type.
+     */
+    renderMovement = function() {
+        var k, el, template, value, base;
+        el = document.getElementById("movementSetup");
+        template = document.getElementById("template-movementType").innerHTML;
+        // TODO: Races
+        base = MovementTracker.RACIAL_TRAITS["human"].walk;
+        for (k in MovementTracker.MOVEMENT_TYPES) {
+            if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(k)) {
+                continue;
+            }
+
+            value = MovementTracker.MOVEMENT_TYPES[k].factor * base;
+            el.insertAdjacentHTML("beforeend",
+                template
+                    .replace("{display}", MovementTracker.MOVEMENT_TYPES[k].text)
+                    .replace("{value}", value)
+                    .replace("{type}", k)
+            );
+        }
+    };
+
     sendHttpRequest("session", "GET")
     .then(function(result) {
-        var data = JSON.parse(result.responseText);
+        var data;
+        renderMovement();
+
+        data = JSON.parse(result.responseText);
         if (data.is_dm_set) {
             wait(hideDmButton);
         }
+    })
+    .catch(function() {
+        renderMovement();
     });
 
     /**
@@ -119,7 +136,7 @@
      * Calls server to set up a session and a player.
      */
     onClickStart = function(event) {
-        var body, result;
+        var body, result, k;
         body = {
             player_name : mainEl.querySelector("[name='playerName']").value,
             player_type : event.currentTarget.getAttribute("data-player_type")
@@ -130,13 +147,13 @@
             body.colour = mainEl.querySelector("[name='colour'][type='text']").value ||
                 mainEl.querySelector("input[name='colour']:checked").value;
             body.colour = body.colour.replace("#", "");
-            body.speed = {
-                walk : parseInt(mainEl.querySelector("[name='walk']").value),
-                swim : parseInt(mainEl.querySelector("[name='swim']").value),
-                fly: parseInt(mainEl.querySelector("[name='fly']").value),
-                climb: parseInt(mainEl.querySelector("[name='climb']").value),
-                burrow: parseInt(mainEl.querySelector("[name='burrow']").value)
-            };
+            body.speed = {};
+            for (k in MovementTracker.MOVEMENT_TYPES) {
+                if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(k)) {
+                    continue;
+                }
+                body.speed[k] = parseInt(mainEl.querySelector("[name='" + k + "']").value);
+            }
         }
 
         // Create the session if needed, then upload the new player.
