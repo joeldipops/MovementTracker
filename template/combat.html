@@ -9,7 +9,7 @@ loadExternalScript("public/combatMap.js");
 <td class="ctrl-combatCell">
     <button class="terrain">&nbsp;</button>
 </td>
-</script>
+</script>   
 <script id="template-movementSetup" type="text/html">
     <div class="ctrl-labelledNumber">
         <input type="number" id="npcSpeed-{type}" name="npcSpeed-{type}" placeholder="{default}" />
@@ -125,7 +125,7 @@ loadExternalScript("public/combatMap.js");
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
         onMoveSelected, onReactClicked, onPositionClicked,
-        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob, isTileFreeForSize,
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -314,10 +314,11 @@ loadExternalScript("public/combatMap.js");
      * @param {HTMLElement} current tile the mob is currently on.
      * @param {HTMLElement} candidate tile the mob tries to reach.
      * @param {object} mob Specifiy a mob to move.  If empty will just simulate the move to check if it can be done.
+     * @param {boolean} makeAttempt True if mob should move if able, false if just a simulation.
      * @returns {boolean} true if point can be reached.
      */
-    attemptMove = function(current, candidate, mob) {
-        var distance, els, speeds, i, j, k, value, total, startDistance;
+    attemptMove = function(current, candidate, mob, makeAttempt) {
+        var distance, els, speeds, i, j, k, x, y, value, total, startDistance;
         els = _menuEl.querySelectorAll("[name='movementType']");
         speeds = {};
         for (i = 0; i < els.length; i++) {
@@ -331,9 +332,15 @@ loadExternalScript("public/combatMap.js");
             return false;
         }
 
+        x = parseInt(candidate.getAttribute("data-x"));
+        y = parseInt(candidate.getAttribute("data-y"));
+
+        if (!isTileFreeForSize(x, y, mob.size)) {
+            return false;
+        }
+
         distance = getDistance(
-            parseInt(candidate.getAttribute("data-x")),
-            parseInt(candidate.getAttribute("data-y")),
+            x, y,
             parseInt(current.getAttribute("data-x")),
             parseInt(current.getAttribute("data-y"))
         );
@@ -391,7 +398,7 @@ loadExternalScript("public/combatMap.js");
                 return false;
             }
         }
-        if (mob) {
+        if (makeAttempt) {
             subtractMovement(speeds);
             moveMob(mob, candidate);
         }
@@ -487,7 +494,7 @@ loadExternalScript("public/combatMap.js");
         loc = pageContext.getMobWithId(mob.id);
         current = pageContext.getCell(loc.x, loc.y);
 
-        if (attemptMove(current, event.currentTarget)) {
+        if (attemptMove(current, event.currentTarget, mob)) {
             event.currentTarget.classList.add("reachable");
         } else {
             event.currentTarget.classList.add("unreachable");
@@ -510,7 +517,7 @@ loadExternalScript("public/combatMap.js");
             onTerrainMouseOver(mob, event);
         } else {
             loc = pageContext.getMobWithId(mob.id);
-            attemptMove(pageContext.getCell(loc.x, loc.y), event.currentTarget, mob);
+            attemptMove(pageContext.getCell(loc.x, loc.y), event.currentTarget, mob, true);
         }
         event.preventDefault();
     };
@@ -544,9 +551,7 @@ loadExternalScript("public/combatMap.js");
         mob = pageContext.getMobWithId(mob.id) || mob;
         x1 = mob.x;
         y1 = mob.y;
-        if (mob) {
-            pageContext.removeMob(mob);
-        }
+        pageContext.removeMob(mob);
 
         initiativeContext.addMob(arguments[0])
 
@@ -800,12 +805,33 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
+     * Checks if a mob of a given size can occupy a given location.
+     * @param {number} x co-ordinate of the tile.
+     * @param {number} y co-ordinate of the tile.
+     * @param {string} size The code for the size.
+     * @returns {boolean} true if can occupy, false otherwise.
+     */
+    isTileFreeForSize = function(x, y, size) {
+        var extant, size;
+        extant = pageContext.getMob(x, y);
+        size = MovementTracker.MOB_SIZES[size];
+
+        for (i = 0; i < (extant ? extant.length : 0); i++) {
+            // "a creature cannot enter the same space of another unless they are two sizes smaller or larger.
+            if (Math.abs(size.rank - MovementTracker.MOB_SIZES[extant[i].size].rank) <= 1) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    /**
      * Adds a new MOB to the map.
      * @param {object} data describing the mob.
      * @param {DOMEvent} event The click event describing where to add the terrain.
      */
     addMob = function(data, event) {
-        var x, y, size, extant, mapSize,
+        var x, y, mapSize, size,
             i, j, el, container, orig;
 
         orig = data;
@@ -822,15 +848,11 @@ loadExternalScript("public/combatMap.js");
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
 
-        size = MovementTracker.MOB_SIZES[data.size];
-        extant = pageContext.getMob(x, y);
-
-        for (i = 0; i < (extant ? extant.length : 0); i++) {
-            // "a creature cannot enter the same space of another unless they are two sizes smaller or larger.
-            if ((size.rank - MovementTracker.MOB_SIZES[extant[i].size].rank) <= 1) {
-                return false;
-            }
+        if (!isTileFreeForSize(x, y, data.size)) {
+            return false;
         }
+
+        size = MovementTracker.MOB_SIZES[data.size];
 
         mapSize = pageContext.getSize();
         maxX = mapSize.width;
@@ -1012,7 +1034,7 @@ loadExternalScript("public/combatMap.js");
             el.insertAdjacentHTML(
                 "beforeend",
                 option.replace(/{type}/g, i)
-                      .replace(/{default}/g, 30 * MovementTracker.MOVEMENT_TYPES[i].factor)
+                      .replace(/{default}/g, MovementTracker.DEFAULT_WALK_SPEED * MovementTracker.MOVEMENT_TYPES[i].factor)
                       .replace(/{display}/g, MovementTracker.MOVEMENT_TYPES[i].text)
             );
         }
@@ -1041,7 +1063,7 @@ loadExternalScript("public/combatMap.js");
                     continue;
                 }
                 data.speed[k] = parseInt(document.querySelector("[name='npcSpeed-" + k + "']").value)
-                    || 30 * MovementTracker.MOVEMENT_TYPES[k].factor;
+                    || MovementTracker.DEFAULT_WALK_SPEED * MovementTracker.MOVEMENT_TYPES[k].factor;
             }
 
             initiativeContext.addMob(data);

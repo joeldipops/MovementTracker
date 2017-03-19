@@ -282,18 +282,40 @@ td.ctrl-combatCell {
         background-color: rgba(0,0,0,0.1);
     }
 
-    td.ctrl-combatCell > button + div {
+    td.ctrl-combatCell > .mob {
         position: absolute;
-        width: 50%;
-        height: 50%;
-        left: 25%;
-        top: 25%;
         border-color: black;
         border-style: solid;
         border-width: 1px;
-
+        width: 50%;
+        height: 50%;
         font-size: small;
     }
+
+        /* Mobs after the first are partially transparent so you can see the bottom. */
+        td.ctrl-combatCell > button + .mob ~.mob {
+            opacity: 0.6;
+        }
+
+        /* First Mob on the tile. */
+        td.ctrl-combatCell > button + .mob {
+            left: 25%;
+            top: 25%;
+        }
+
+        /* Second mob on the tile. */
+        td.ctrl-combatCell > button
+        + .mob + .mob {
+            left: 0;
+            top: 0;
+        }
+
+        /** etc **/
+        td.ctrl-combatCell > button
+        + .mob + .mob +.mob {
+            left: 50%;
+            top: 50%;
+        }
 
     td.ctrl-combatCell > .hasTurn {
         font-weight: bold;

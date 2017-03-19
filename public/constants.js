@@ -3,6 +3,7 @@
         window.MovementTracker = {};
     }
     window.MovementTracker.UNITS_PER_TILE = 5;
+    window.MovementTracker.DEFAULT_WALK_SPEED = 30;
 
     window.MovementTracker.TERRAIN_TYPES = {
         normal: {
@@ -18,12 +19,12 @@
         climbable: {
             text: "Climbable",
             colour: "#DDAAAA",
-            speeds: ["fly", "climb", "walk|2"]
+            speeds: ["fly", "climb"]
         },
         swimable: {
             text: "Swimable",
             colour: "#0000FF",
-            speeds: ["fly", "swim", "walk|2"]
+            speeds: ["fly", "swim"]
         },
         impassable: {
             text: "Impassable",
@@ -58,9 +59,9 @@
         tiny : { text: "Tiny", tiles: 1, rank : 1 },
         small : { text: "Small", tiles: 1, rank : 2 },
         medium: { text: "Medium", tiles: 1, rank: 3 },
-        large : { text : "Large", tiles: 1, rank: 4 },
-        huge : { text : "Huge", tiles: 1, rank: 5},
-        colossal: { text: "Colossal", tiles: 1, rank: 6 }
+        large : { text : "Large", tiles: 2, rank: 4 },
+        huge : { text : "Huge", tiles: 3, rank: 5},
+        colossal: { text: "Colossal", tiles: 4, rank: 6 }
     };
     
     window.MovementTracker.RACIAL_TRAITS = {
