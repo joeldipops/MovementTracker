@@ -1,9 +1,8 @@
-var UNITS_PER_TILE, mainEl,
+var mainEl,
     onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
     showAlert, sendHttpRequest, replaceBody, loadExternalScript,
     pageContext;
 
-UNITS_PER_TILE = 5;
 pageContext = {};
 
 var a = function() {

@@ -244,18 +244,17 @@ loadExternalScript("public/combatMap.js");
         }
 
         // Add the speeds we have access to.
-        for (k in pageContext.movementTypes) {
-            if (!pageContext.movementTypes.hasOwnProperty(k)) {
+        for (k in MovementTracker.MOVEMENT_TYPES) {
+            if (!MovementTracker.MOVEMENT_TYPES.hasOwnProperty(k)) {
                 continue;
             }
             // We don't have this speed.
             if (!data.speed[k]) {
-                //data.speed[k] = (data.speed["walk"] * pageContext.movementTypes[k].factor) || 0;
                 continue;
             }
 
             temp = template.replace(/{type}/g, k)
-                .replace(/{text}/g, pageContext.movementTypes[k].text)
+                .replace(/{text}/g, MovementTracker.MOVEMENT_TYPES[k].text)
                 .replace(/{remaining}/g, data.speed[k]);
             el.insertAdjacentHTML("beforeend", temp);
         }
@@ -365,12 +364,12 @@ loadExternalScript("public/combatMap.js");
                 continue;
             }
             // Use the best speed we have first (eg. swimming for water)
-            for (i = 0; i < pageContext.terrainTypes[k].speeds.length; i++) {
+            for (i = 0; i < MovementTracker.TERRAIN_TYPES[k].speeds.length; i++) {
                 startDistance = distance[k];
                 if (distance[k] <= 0) {
                     break;
                 }
-                value = (pageContext.terrainTypes[k].speeds[i] || []).split("|");
+                value = (MovementTracker.TERRAIN_TYPES[k].speeds[i] || []).split("|");
                 if (!speeds[value[0]]) {
                     continue;
                 }
@@ -443,12 +442,12 @@ loadExternalScript("public/combatMap.js");
                 if (!result[cell]) {
                     result[cell] = 0;
                 }
-                result[cell] += UNITS_PER_TILE;
+                result[cell] += MovementTracker.UNITS_PER_TILE;
             }
             return result;
         }
 
-        factor = UNITS_PER_TILE * 10;
+        factor = MovementTracker.UNITS_PER_TILE * 10;
 
         x1 *= factor;
         x2 *= factor;
@@ -470,22 +469,17 @@ loadExternalScript("public/combatMap.js");
             y = Math.floor((m * i + c) / factor);
             x = Math.floor(i / factor);
 
-            //if (visited[x + "," + y]) {
-            //    continue;
-            //}
-            //visited[x + "," + y] = true;
-
             cell = pageContext.getCell(x, y);
             cell = cell.getAttribute("data-type");
             if (!result[cell]) {
                 result[cell] = 0;
             }
-            //result[cell] += UNITS_PER_TILE;
+
             result[cell]++;
         }
 
         // Find the actual distance travelled with pythagoras.
-        distance = (Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)) / factor) * UNITS_PER_TILE;
+        distance = (Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)) / factor) * MovementTracker.UNITS_PER_TILE;
 
         for (k in result) {
             if (!result.hasOwnProperty(k)) {
@@ -617,7 +611,7 @@ loadExternalScript("public/combatMap.js");
     /**
      * Handles messages received through the web socket.
      */
-    onReceiveMessage = function(event) {
+    onMessageReceived = function(event) {
         var data, fn;
         data = JSON.parse(event.data);
         if (data["map_update"]) {
@@ -667,14 +661,13 @@ loadExternalScript("public/combatMap.js");
             el.classList.add("hidden");
         }
         wait(function() {
-            if (pageContext.terrainTypes) {
-                renderMenu();
-                generateMap();
-                onEvent(window.socket, "message", onReceiveMessage);
-                return true;
-            } else {
+            if (!pageContext.renderMap) {
                 return false;
             }
+            renderMenu();
+            generateMap();
+            onEvent(window.socket, "message", onMessageReceived);
+            return true;
         });
     };
 
@@ -683,8 +676,7 @@ loadExternalScript("public/combatMap.js");
      */
     onPlayStart = function() {
         document.body.setAttribute("data-state", "combat");
-        onEvent(window.socket, "message", onReceiveMessage);
-        runAsync([
+        return runAsync([
             // Get the current state of the map.
             sendHttpRequest("session/" + window.sessionId + "/map", "GET"),
             // Get the current turn.
@@ -719,6 +711,7 @@ loadExternalScript("public/combatMap.js");
                 }
                 return false;
             });
+            return true;
         })
         .catch(function() {
             debugger;
@@ -733,11 +726,13 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.offListEvent("react", onReactClicked);
         initiativeContext.offListEvent("position", onPositionClicked);
         initiativeContext.offListEvent("toggleMob", toggleMob);
+        onEvent(window.socket, "message", onMessageReceived);
     };
 
     if (document.body.hasAttribute("data-isDM")) {
         onSetupStart();
     } else {
+        resetEvents();
         onPlayStart();
     }
 
@@ -765,14 +760,14 @@ loadExternalScript("public/combatMap.js");
     onStartClicked = function() {
         var requestBody;
         requestBody = pageContext.mapToJSON();
+        resetEvents();
         initiativeContext.resetTurns();
-        runAsync([
-            triggerNextTurn(),
-            sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
-        ])
+        sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
-            resetEvents();
-            onPlayStart();
+            return onPlayStart();
+        })
+        .then(function() {
+            return triggerNextTurn();
         })
         .catch(function(res) {
             if(res.status) {
@@ -842,12 +837,12 @@ loadExternalScript("public/combatMap.js");
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
 
-        size = pageContext.mobSizes[data.size];
+        size = MovementTracker.MOB_SIZES[data.size];
         extant = pageContext.getMob(x, y);
 
         for (i = 0; i < (extant ? extant.length : 0); i++) {
             // "a creature cannot enter the same space of another unless they are two sizes smaller or larger.
-            if ((size.rank - pageContext.mobSizes[extant[i].size].rank) <= 1) {
+            if ((size.rank - MovementTracker.MOB_SIZES[extant[i].size].rank) <= 1) {
                 return false;
             }
         }
@@ -1001,20 +996,20 @@ loadExternalScript("public/combatMap.js");
 
         // NPC creature sizes.
         el = _menuEl.querySelector("#mobOptions [name='npcSize']");
-        for (i in pageContext.mobSizes) {
+        for (i in MovementTracker.MOB_SIZES) {
             option = document.createElement("option");
             option.setAttribute("value", i);
-            option.innerHTML = pageContext.mobSizes[i].text;
+            option.innerHTML = MovementTracker.MOB_SIZES[i].text;
             option.selected = (i === "medium");
             el.appendChild(option);
         }
 
         el = _menuEl.querySelector("#terrainOptions > ul[name='terrainTypes']");
         // Terrain type radio buttons.
-        for (i in pageContext.terrainTypes) {
+        for (i in MovementTracker.TERRAIN_TYPES) {
             option = document.getElementById("template-terrainType").innerHTML;
             option = option.replace(/{type}/g, i)
-                .replace(/{text}/g, pageContext.terrainTypes[i].text);
+                .replace(/{text}/g, MovementTracker.TERRAIN_TYPES[i].text);
             el.insertAdjacentHTML("beforeend", option);
         }
 

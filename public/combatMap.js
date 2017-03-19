@@ -1,8 +1,8 @@
 (function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex, isIdEqual;
 
-    _mapEvents = [];
     _mapEl = document.getElementById("map");
+    _mapEvents = [];
     _mobs = {};
     _mobIndex = {};
 
@@ -60,11 +60,11 @@
                     newTd = document.createElement("th");
                     if (x !== 0) {
                         newTd.setAttribute("scope", "column");
-                        newTd.innerHTML = x * UNITS_PER_TILE;
+                        newTd.innerHTML = x * MovementTracker.UNITS_PER_TILE;
                     }
                     if (y !== 0) {
                         newTd.setAttribute("scope", "row");
-                        newTd.innerHTML = y * UNITS_PER_TILE;
+                        newTd.innerHTML = y * MovementTracker.UNITS_PER_TILE;
                     }
                     newTr.appendChild(newTd);
                 } else {
@@ -151,66 +151,6 @@
         _mapEvents = [];
     };
 
-    pageContext.terrainTypes = {
-        normal: {
-            text : "Normal",
-            colour : "rgba(0,0,0,0)",
-            speeds: ["fly", "walk"]
-        },
-        difficult : {
-            text : "Difficult",
-            colour : "#CCCCCC",
-            speeds: ["fly","walk|2"]
-        },
-        climbable: {
-            text: "Climbable",
-            colour: "#DDAAAA",
-            speeds: ["fly", "climb", "walk|2"]
-        },
-        swimable: {
-            text: "Swimable",
-            colour: "#0000FF",
-            speeds: ["fly", "swim", "walk|2"]
-        },
-        impassable: {
-            text: "Impassable",
-            colour: "#000000",
-        }
-    };
-
-    pageContext.movementTypes = {
-        walk : {
-            text : "WALK",
-            factor: 1
-        },
-        swim: {
-            text : "SWIM",
-            factor: 0.5
-        },
-        climb: {
-            text : "CLIMB",
-            factor: 0.5
-        },
-        fly : {
-            text : "FLY",
-            factor: 0
-        },
-        burrow: {
-            text : "BURROW",
-            factor: 0
-        }
-    };
-
-    // Not authoritative sizes.
-    pageContext.mobSizes = {
-        tiny : { text: "Tiny", tiles: 1, rank : 1 },
-        small : { text: "Small", tiles: 1, rank : 2 },
-        medium: { text: "Medium", tiles: 1, rank: 3 },
-        large : { text : "Large", tiles: 1, rank: 4 },
-        huge : { text : "Huge", tiles: 1, rank: 5},
-        colossal: { text: "Colossal", tiles: 1, rank: 6 }
-    };
-
     /**
      * Gets mobs partially or fully in a given cell.
      * @param {number} x co-ordinate of the cell.
@@ -289,7 +229,7 @@
     pageContext.setTerrain = function(x, y, type) {
         var el = pageContext.getCell(x, y);
         el.setAttribute("data-type", type);
-        el.style.backgroundColor = pageContext.terrainTypes[type].colour;
+        el.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
     };
 
     /**
