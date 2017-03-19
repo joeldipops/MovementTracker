@@ -41,6 +41,10 @@
     pageContext.renderMap = function(data, template) {
         var x, y, key, i,
             newTr, newTd, button;
+
+        // Reset since it's a fresh render..
+        _mobs = {};
+        _mobIndex = {};
             
         _mapEL = _mapEl || document.getElementById("map");
     

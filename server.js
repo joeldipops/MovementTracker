@@ -244,7 +244,7 @@ function movePlayer(req, res) {
             character_name : req.body.character_name,
             colour: req.body.colour
         }
-    });
+    }, [req.body.socket_id]);
     res.writeHead(200);
     res.end();
 };

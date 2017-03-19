@@ -865,9 +865,8 @@ loadExternalScript("public/combatMap.js");
                 pageContext.setMob(i, j, data);
             }
         }
-        
+
         // Notify all
-        // TODO: WHEN Merge with dmSetup.js, ensure that request is only made during play.
         if (document.body.getAttribute("data-state") === "combat") {
             sendHttpRequest(
                 "session/" + window.sessionId + "/player/" + data.id + "/move",
