@@ -1,20 +1,12 @@
 .hidden { display: none !important; }
-:focus {outline:none;}
-::-moz-focus-inner {border:0;}
+:focus {outline: none;}
+::-moz-focus-inner {border: 0;}
 
-input[type='number'] {
-    width: 3rem;
-    text-align: center;
-    font-size: 2rem;
-    display: inline-block;
-    height: 3rem;
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
-
-    input[type=number]::-webkit-inner-spin-button,
-    input[type=number]::-webkit-outer-spin-button {
-        -webkit-appearance: none;
-        margin: 0;
-    }
 
 .form .ctrl-thickButton {
     margin-left: 0;
@@ -36,10 +28,23 @@ input[type='number'] {
         margin: 0 auto;
         width: 3rem;
     }
-    .ctrl-labelledNumber > input {
+    .ctrl-labelledNumber > input,
+    .ctrl-labelledNumber > .value {
         font-size: x-large;
+        width: 3rem;
+        height: 3rem;
+        line-height: 3rem;
+        text-align: center;
+        display: inline-block;
     }
-    .ctrl-labelledNumber > label {
+
+    /* Native input border colour */
+    .ctrl-labelledNumber > .value {
+        border: 2px rgb(238, 238, 238) ridge;
+    }
+
+    .ctrl-labelledNumber > label,
+    .ctrl-labelledNumber > .label {
         width: 3rem;
         left: 0;
         position: absolute;
@@ -135,9 +140,6 @@ body {
         width: 25%;
     }
 
-    .ctrl-tabSet > fieldset { border: none; }
-    .ctrl-tabSet > fieldset > legend { display: none; }
-
     .ctrl-tabSet > input[type='radio'] { display: none; }
 
     .ctrl-tabSet > input[type='radio']:checked + label {
@@ -151,11 +153,12 @@ body {
     }
 
     .ctrl-tabSet > input[type='radio']:not(:checked) + label + section,
-    .ctrl-tabSet > input[type='radio']:not(:checked) + label + fieldset {
-            display: none;
+    .ctrl-tabSet > input[type='radio']:not(:checked) + label + .tabSection {
+        display: none;
     }
     .ctrl-tabSet > section,
-    .ctrl-tabSet > fieldset {
+    .ctrl-tabSet > .tabSection {
+        border: none;
         box-sizing: border-box;
         position: absolute;
         top: 20px;
@@ -261,28 +264,30 @@ body {
         body[data-state="combat"][data-isDm] .initiativeList > li > [name='position'] { display: inline-block; }
         body[data-state="combat"][data-isDm] .initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
+    body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
 
-td.ctrl-combatCell {
+
+.ctrl-combatCell {
     padding: 0;
     position: relative;
 }
 
-    td.ctrl-combatCell > .terrain {
+    .ctrl-combatCell > .terrain {
         height: 100%;
         width: 100%;
         border-width: 0;
         background-color: inherit;
     }
 
-    td.ctrl-combatCell > .terrain:focus,
-    td.ctrl-combatCell > .terrain:active {
+    .ctrl-combatCell > .terrain:focus,
+    .ctrl-combatCell > .terrain:active {
         background-color: rgba(0,0,0,0.2);
     }
-    td.ctrl-combatCell > .terrain:hover {
+    .ctrl-combatCell > .terrain:hover {
         background-color: rgba(0,0,0,0.1);
     }
 
-    td.ctrl-combatCell > .mob {
+    .ctrl-combatCell > .mob {
         position: absolute;
         border-color: black;
         border-style: solid;
@@ -293,62 +298,60 @@ td.ctrl-combatCell {
     }
 
         /* Mobs after the first are partially transparent so you can see the bottom. */
-        td.ctrl-combatCell > button + .mob ~.mob {
+        .ctrl-combatCell > .mob ~.mob {
             opacity: 0.6;
         }
 
         /* First Mob on the tile. */
-        td.ctrl-combatCell > button + .mob {
+        .ctrl-combatCell > .mob {
             left: 25%;
             top: 25%;
         }
 
         /* Second mob on the tile. */
-        td.ctrl-combatCell > button
-        + .mob + .mob {
+        .ctrl-combatCell > .mob + .mob {
             left: 0;
             top: 0;
         }
 
         /** etc **/
-        td.ctrl-combatCell > button
-        + .mob + .mob +.mob {
+        .ctrl-combatCell > .mob + .mob +.mob {
             left: 50%;
             top: 50%;
         }
 
-    td.ctrl-combatCell > .hasTurn {
+    .ctrl-combatCell > .hasTurn {
         font-weight: bold;
     }
-    td.ctrl-combatCell > .hasTurn::before {
+    .ctrl-combatCell > .hasTurn::before {
         position: absolute;
         left: -10px;
         content: ">";
     }
 
-    td.ctrl-combatCell > .isMyPc {
+    .ctrl-combatCell > .isMyPc {
         border-color: gold;
         border-width: 3px;
         border-style: groove;
     }
 
-    td.ctrl-combatCell > .terrain.reachable:hover {
+    .ctrl-combatCell > .terrain.reachable:hover {
         background-color: rgba(0, 255, 0, 0.4) !important;
     }
 
-    td.ctrl-combatCell > .terrain.unreachable:hover {
+    .ctrl-combatCell > .terrain.unreachable:hover {
         background-color: rgba(255, 0, 0, 0.4) !important;
     }
 
-table.ctrl-combatMap {
+.ctrl-combatMap {
     table-layout: fixed;
     border: solid 1px #000;
     border-width: 0 1px 1px 0;
     border-spacing: 0;
     touch-action: pan-y pan-x;
 }
-    table.ctrl-combatMap th,
-    table.ctrl-combatMap td {
+    .ctrl-combatMap th,
+    .ctrl-combatMap td {
         width:25px;
         height: 25px;
         vertical-align: middle;
@@ -361,126 +364,51 @@ table.ctrl-combatMap {
     only screen and (min--moz-device-pixel-ratio: 1.5),
     only screen and (-o-device-pixel-ratio: 3/2),
     only screen and (min-device-pixel-ratio: 1.5) {
-        table.ctrl-combatMap th,
-        table.ctrl-combatMap td {
+        .ctrl-combatMap th,
+        .ctrl-combatMap td {
             width: 35px;
             height: 35px;
         }
     }
 
-    table.ctrl-combatMap th {
+    .ctrl-combatMap th {
         border-style: solid;
-
     }
-    table.ctrl-combatMap th[scope='column'] {
+    .ctrl-combatMap th[scope='column'] {
         border-bottom-width: 0;
     }
-    table.ctrl-combatMap th[scope='row'] {
+    .ctrl-combatMap th[scope='row'] {
         border-right-width: 0;
     }
 
-    table.ctrl-combatMap td {
+    .ctrl-combatMap td {
         border-style: dotted;
     }
 
-    table.ctrl-combatMap td:first-of-type {
+    .ctrl-combatMap td:first-of-type {
         border-left-style: solid;
     }
 
-    table.ctrl-combatMap tr:nth-child(2) > td{
+    .ctrl-combatMap tr:nth-child(2) > td{
         border-top-style: solid;
     }
 
-ul.ctrl-colourOption {
-    padding-left: 0;
-    list-style-type: none;
-}
+.ctrl-radioBoxButton {}
 
-.ctrl-speedOptions {
-}
-
-    .ctrl-speedOptions > * {
-        text-align: center;
-    }
-
-    .ctrl-speedOptions input[type='radio'] {
+    .ctrl-radioBoxButton > input[type='radio'] {
         display: none;
     }
 
-    .ctrl-speedOptions label {
+    .ctrl-radioBoxButton > label {
         display: inline-block;
-        width: 3rem;
-        height: 3rem;
-        line-height: 0;
-        border: 2px outset black;
-    }
-
-        .ctrl-speedOptions label h6,
-        .ctrl-speedOptions label span {
-            display: block;
-        }
-
-        .ctrl-speedOptions label h6 {
-            line-height: 1rem;
-            margin: 0;
-        }
-
-        .ctrl-speedOptions label span {
-            line-height: 30px;
-            margin-bottom: 1rem;
-            font-size: xx-large;
-        }
-
-    .ctrl-speedOptions input[type='radio']:checked + label {
-        border-width: 2px;
-        border-style: inset;
-    }
-
-
-.ctrl-colourOption > input[type='radio'] {
-    display: none;
-}
-
-    .ctrl-colourOption > label {
-        display: inline-block;
-    }
-
-    .ctrl-colourOption > label:first-child {
-        vertical-align: top;
-        line-height: 50px;
-    }
-
-    .ctrl-colourOption > input + label {
         width: 50px;
         height: 50px;
         border: 1px solid black;
     }
 
-        .ctrl-colourOption > input:checked + label {
-            border: 3px  solid gray;
-        }
-
-        .ctrl-colourOption > input[value='FF0000'] + label { 
-            background-color: #FF0000;
-        }
-        .ctrl-colourOption > input[value='00FF00'] + label { 
-            background-color: #00FF00;
-        }
-        .ctrl-colourOption > input[value='0000FF'] + label { 
-            background-color: #0000FF;
-        }
-        .ctrl-colourOption > input[value='000000'] + label {  
-            background-color: #000000;
-        }
-        .ctrl-colourOption > input[value='00FFFF'] + label {  
-            background-color: #00FFFF;
-        }
-        .ctrl-colourOption > input[value='FF00FF'] + label { 
-            background-color: #FF00FF;
-        }
-        .ctrl-colourOption > input[value='FFFF00'] + label {  
-            background-color: #FFFF00;
-        }
+    .ctrl-radioBoxButton > input:checked + label {
+        border: 3px solid gray;
+    }
 
 .ctrl-modal {
     position: fixed;
@@ -510,28 +438,10 @@ ul.ctrl-colourOption {
         visibility: visible;
     }
 
-/* Temporary "modal" that needs cleaning up. */
-.ctrl-modal_ > div {
-    position: fixed;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(255,255,255,0.4);
-}
-
-.ctrl-modal_ > section {
-    margin: 0 auto;
-    width: 30%;
-    position: absolute;
-    top: 200px;
-}
-
-body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
-
 #turn > .turnHeading {
     opacity: 0;
 }
+
 #turn > .turnHeading.updated {
     -webkit-transition: opacity 2s ease-in;
     -moz-transition: opacity 2s ease-in;
@@ -548,7 +458,7 @@ body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { 
     padding-left: 0;
 }
 
-#social > div {
+#social > .heading {
     padding-top: 5px;
     text-align: center;
 }
@@ -557,3 +467,11 @@ body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { 
     padding-top: 10px;
     padding: 5px;
 }
+
+.colour.red { background-color: #FF0000; }
+.colour.green { background-color: #00FF00; }
+.colour.blue { background-color: #0000FF; }
+.colour.black { background-color: #000000; }
+.colour.cyan { background-color: #00FFFF; }
+.colour.magenta { background-color: #FF00FF; }
+.colour.yellow { background-color: #FFFF00; }

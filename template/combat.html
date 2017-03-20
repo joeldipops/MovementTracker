@@ -9,7 +9,7 @@ loadExternalScript("public/combatMap.js");
 <td class="ctrl-combatCell">
     <button class="terrain">&nbsp;</button>
 </td>
-</script>   
+</script>
 <script id="template-movementSetup" type="text/html">
     <div class="ctrl-labelledNumber">
         <input type="number" id="npcSpeed-{type}" name="npcSpeed-{type}" placeholder="{default}" />
@@ -17,8 +17,12 @@ loadExternalScript("public/combatMap.js");
     </div>
 </script>
 <script id="template-movementOption" type="text/html">
+<div class="ctrl-labelledNumber">
+    <label for="movementType-{type}">{text}</label>
+    <span class="value" name="remaining">{remaining}</span>
     <input
         id="movementType-{type}"
+        class="hidden"
         type="radio"
         name="movementType"
         value="{type}"
@@ -26,10 +30,7 @@ loadExternalScript("public/combatMap.js");
         data-remaining="{remaining}"
         data-used="0"
     />
-    <label for="movementType-{type}">
-        <h6>{text}</h6>
-        <span name="remaining">{remaining}</span>
-    </label>
+</div>
 </script>
 <script id="template-controls" type="text/html">
     <div class="ctrl-speedOptions"></div>
@@ -52,8 +53,8 @@ loadExternalScript("public/combatMap.js");
     <div class="ctrl-tabSet" id="dmControlTabs" data-tabs="3">
         <input type="radio" name="controlTab" id="turnControlsTab" />
         <label class="hidden" for="turnControlsTab">TURN</label>
-        <fieldset id="turnOptions">
-            <legend></legend>
+        <fieldset class="tabSection" id="turnOptions">
+            <legend class="hidden"></legend>
             <div class="ctrl-speedOptions"></div>
             <div class="ctrl-column">
                 <div class="ctrl-toggle">
@@ -70,19 +71,23 @@ loadExternalScript("public/combatMap.js");
 
         <input type="radio" name="controlTab" id="mapControlsTab" checked />
         <label for="mapControlsTab">MAP</label>
-        <fieldset id="mapOptions">
-            <legend></legend>
+        <fieldset class="tabSection" id="mapOptions">
+            <legend class="hidden"></legend>
             <div class="ctrl-coordinate">
-                <input id="mapWidth" type="number" name="mapWidth" value="12" placeholder="width" />
+                <div class="ctrl-labelledNumber">
+                    <input id="mapWidth" type="number" name="mapWidth" value="12" placeholder="width" />
+                </div>
                 <span>x</span>
-                <input id="mapHeight" type="number" name="mapHeight" value="12" placeholder="height" />
+                <div class="ctrl-labelledNumber">
+                    <input id="mapHeight" type="number" name="mapHeight" value="12" placeholder="height" />
+                </div>
             </div>
         </fieldset>
 
         <input type="radio" name="controlTab" id="mobControlsTab" />
         <label for="mobControlsTab">MOB</label>
-        <fieldset id="mobOptions">
-            <legend></legend>
+        <fieldset class="tabSection" id="mobOptions">
+            <legend class="hidden"></legend>
             <div>
                 <input class="ctrl-flat" type="text" id="npcName" name="npcName" placeholder="NAME" />
             </div>
@@ -98,12 +103,16 @@ loadExternalScript("public/combatMap.js");
 
         <input type="radio" name="controlTab" id="terrainControlsTab" />
         <label for="terrainControlsTab">TURF</label>
-        <fieldset id="terrainOptions">
-            <legend></legend>
+        <fieldset class="tabSection" id="terrainOptions">
+            <legend class="hidden"></legend>
             <div class="ctrl-coordinate">
-                <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="terrainWidth" name="terrainWidth" value="1" />
+                </div>
                 <span>x</span>
-                <input type="number" id="terrainLength" name="terrainLength" value="1" />
+                <div class="ctrl-labelledNumber">
+                    <input type="number" id="terrainLength" name="terrainLength" value="1" />
+                </div>
             </div>
             <ul class="ctrl-colourOption" name="terrainTypes"></ul>
         </fieldset>
@@ -207,7 +216,7 @@ loadExternalScript("public/combatMap.js");
             }
 
             el.setAttribute("data-remaining", total);
-            el.parentNode.querySelector("[for='" + el.id + "'] [name='remaining']").innerHTML = total;
+            el.parentNode.querySelector("[for='" + el.id + "'] + [name='remaining']").innerHTML = total;
         }
     };
 
@@ -535,7 +544,7 @@ loadExternalScript("public/combatMap.js");
                 parseInt(el.getAttribute("data-used")) + (parseInt(el.getAttribute("data-remaining")) - speeds[k])
             );
             el.setAttribute("data-remaining", speeds[k]);
-            el.parentNode.querySelector("[for='"+ el.id + "'] [name='remaining']").innerHTML = speeds[k];
+            el.parentNode.querySelector("[for='"+ el.id + "'] + [name='remaining']").innerHTML = speeds[k];
         }
     };
 

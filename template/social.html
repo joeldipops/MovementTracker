@@ -1,4 +1,4 @@
-<div>Waiting for DM</div>
+<h2 class="heading">Waiting for DM</h2>
 <ol class="initiativeList"></ol>
 <script id="template-initiativeListItem" type="text/html">
 <li
@@ -159,7 +159,7 @@ window.initiativeContext = {};
      * @param {object} data describing dm.
      */
     addDM = function(data) {
-        var el = document.querySelector("#social > div");
+        var el = document.querySelector("#social > h2");
         el.innerHTML = "DM is " + data.player_name;
     };
 
@@ -167,7 +167,7 @@ window.initiativeContext = {};
      * Reverts the dm display if they leave.
      */
     removeDM = function(data) {
-        var el = document.querySelector("#social > div");
+        var el = document.querySelector("#social > h2");
         el.innerHTML = "Waiting for DM";
     };
 
