@@ -2,6 +2,9 @@
 :focus {outline: none;}
 ::-moz-focus-inner {border: 0;}
 
+input[type='number'] {
+    -moz-appearance: textfield;
+}
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
     -webkit-appearance: none;
@@ -226,7 +229,7 @@ body {
     background-color: bisque;
     margin-top: 0;
     margin-bottom: 0;
-    width: 240px;
+    width: 241px;
 }
 
     .initiativeList > li > .mobName {
@@ -237,13 +240,14 @@ body {
     .initiativeList > li > * {
         vertical-align: middle;
     }
-    .initiativeList > li > .initiativeScore { display: none; }
-    .initiativeList > li > [name='react'] { display: none; }
-    .initiativeList > li > [name='position'] { display: none; }
-    .initiativeList > li > [name='toggleMob'] { display: none; }
+    .initiativeList > li > .initiativeScore,
+    .initiativeList > li > [name='react'],
+    .initiativeList > li > [name='position'],
+    .initiativeList > li > [name='toggleMob'],
+    .initiativeList > li > [name='setTurn'] { display: none; }
 
     body[data-state='setup'] .initiativeList > li {}
-        body[data-state='setup'] .initiativeList > li > [name='position'] { display: inline-block; }
+        body[data-state='setup'] .initiativeList > li > [name='position'],
         body[data-state='setup'] .initiativeList > li > [name='toggleMob'] { display: inline-block; }
 
     body[data-state="combat"] .initiativeList > li {}
@@ -261,8 +265,9 @@ body {
         body[data-state="combat"][data-isDm] .initiativeList > li[data-mobType='npc']:not([data-reacted]) > [name='react'] {
             display: inline-block;
         }
-        body[data-state="combat"][data-isDm] .initiativeList > li > [name='position'] { display: inline-block; }
-        body[data-state="combat"][data-isDm] .initiativeList > li > [name='toggleMob'] { display: inline-block; }
+        body[data-state="combat"][data-isDm] .initiativeList > li > [name='position'],
+        body[data-state="combat"][data-isDm] .initiativeList > li > [name='toggleMob'],
+        body[data-state="combat"][data-isDm] .initiativeList > li:not(.currentTurn) > [name='setTurn'] { display: inline-block; }
 
     body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
 

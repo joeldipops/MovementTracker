@@ -134,7 +134,7 @@ loadExternalScript("public/combatMap.js");
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
         onMoveSelected, onReactClicked, onPositionClicked,
-        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob, isTileFreeForSize,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob, setTurn, isTileFreeForSize,
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -725,6 +725,7 @@ loadExternalScript("public/combatMap.js");
         initiativeContext.offListEvent("react", onReactClicked);
         initiativeContext.offListEvent("position", onPositionClicked);
         initiativeContext.offListEvent("toggleMob", toggleMob);
+        initiativeContext.offListEvent("setTurn", setTurn);
         onEvent(window.socket, "message", onMessageReceived);
     };
 
@@ -1001,6 +1002,15 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
+     * Sets the current turn to that of a particular mob.
+     * @param {object} data The mob data.
+     * @returns {Promise} Resolves when http request is complete.
+     */
+    setTurn = function(data) {
+        return sendHttpRequest("session/" + window.sessionId + "/turn/" + data.id, "PUT");
+    }
+
+    /**
      * Renders controls in the menu container.
      */
     renderDMMenu = function() {
@@ -1086,7 +1096,10 @@ loadExternalScript("public/combatMap.js");
 
         // When in set up mode, deleting an NPC gets rid of it completely.
         initiativeContext.onListEvent("toggleMob", toggleMob);
-        
+
+        // When clicked, sets this mob to have the current turn.
+        initiativeContext.onListEvent("setTurn", setTurn);
+
         // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {
             pageContext.removeMapEvents();
