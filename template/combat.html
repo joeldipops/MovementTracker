@@ -761,12 +761,12 @@ loadExternalScript("public/combatMap.js");
         var requestBody;
         requestBody = pageContext.mapToJSON();
         resetEvents();
-        initiativeContext.resetTurns();
         sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
             return onPlayStart();
         })
         .then(function() {
+            initiativeContext.resetTurns();
             return triggerNextTurn();
         })
         .catch(function(res) {
