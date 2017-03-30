@@ -17,12 +17,9 @@ loadExternalScript("public/combatMap.js");
     </div>
 </script>
 <script id="template-movementOption" type="text/html">
-<div class="ctrl-labelledNumber">
-    <label for="movementType-{type}">{text}</label>
-    <span class="value" name="remaining">{remaining}</span>
+<div class="ctrl-labelledNumber ctrl-radioBoxButton">
     <input
         id="movementType-{type}"
-        class="hidden"
         type="radio"
         name="movementType"
         value="{type}"
@@ -30,21 +27,25 @@ loadExternalScript("public/combatMap.js");
         data-remaining="{remaining}"
         data-used="0"
     />
+    <label for="movementType-{type}" name="movementType">{text}</label>
+    <span class="value" name="remaining">{remaining}</span>
 </div>
 </script>
 <script id="template-controls" type="text/html">
     <div class="ctrl-speedOptions"></div>
-    <div class="ctrl-column">
-        <div class="ctrl-toggle">
-            <input if="dashAction" type="checkbox" name="dashAction" />
-            <label for="dashAction">DASH</label>
+    <div class="ctrl-row">
+        <div class="ctrl-column">
+            <div class="ctrl-toggle">
+                <input if="dashAction" type="checkbox" name="dashAction" />
+                <label for="dashAction">DASH</label>
+            </div>
+            <div class="ctrl-toggle">
+                <input id="dashBonus" type="checkbox" name="dashBonus" />
+                <label for="dashBonus">BONUS</label>
+            </div>
         </div>
-        <div class="ctrl-toggle">
-            <input id="dashBonus" type="checkbox" name="dashBonus" />
-            <label for="dashBonus">BONUS</label>
-        </div>
+        <button class="ctrl-thickButton" name="done">DONE</button>
     </div>
-    <button class="ctrl-thickButton" name="done">DONE</button>
 </script>
 <script id="template-dmControls" type="text/html">
     <button class="ctrl-flat" name="start">Start</button>
@@ -56,17 +57,19 @@ loadExternalScript("public/combatMap.js");
         <fieldset class="tabSection" id="turnOptions">
             <legend class="hidden"></legend>
             <div class="ctrl-speedOptions"></div>
-            <div class="ctrl-column">
-                <div class="ctrl-toggle">
-                    <input id="dashAction" type="checkbox" name="dashAction" />
-                    <label for="dashAction">DASH</label>
+            <div class="ctrl-row">
+                <div class="ctrl-column">
+                    <div class="ctrl-toggle">
+                        <input if="dashAction" type="checkbox" name="dashAction" />
+                        <label for="dashAction">DASH</label>
+                    </div>
+                    <div class="ctrl-toggle">
+                        <input id="dashBonus" type="checkbox" name="dashBonus" />
+                        <label for="dashBonus">BONUS</label>
+                    </div>
                 </div>
-                <div class="ctrl-toggle">
-                    <input id="dashBonus" type="checkbox" name="dashBonus" />
-                    <label for="dashBonus">BONUS</label>
-                </div>
+                <button class="ctrl-thickButton" name="done">DONE</button>
             </div>
-            <button class="ctrl-thickButton" name="done">DONE</button>
         </fieldset>
 
         <input type="radio" name="controlTab" id="mapControlsTab" checked />
@@ -114,7 +117,7 @@ loadExternalScript("public/combatMap.js");
                     <input type="number" id="terrainLength" name="terrainLength" value="1" />
                 </div>
             </div>
-            <ul class="ctrl-colourOption" name="terrainTypes"></ul>
+            <ul class="ctrl-radioButtonList" name="terrainTypes"></ul>
         </fieldset>
     </div>
 </script>
@@ -130,7 +133,7 @@ loadExternalScript("public/combatMap.js");
 </script>
 <script type="application/javascript">
 (function combatScript() {
-    var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement,
+    var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
         onMoveSelected, onReactClicked, onPositionClicked,
@@ -319,6 +322,40 @@ loadExternalScript("public/combatMap.js");
     window.initiativeContext.onListEvent("turn_start", onTurnStart);
 
     /**
+     * Determines the order in which various speeds should be used up in a movement.
+     * @param {string} terrain The type of terrain to move through.
+     * @returns {Array of string}  Array of possible speeds from first to last.
+     */
+    getSpeedPriority = function(terrain) {
+        var priority, result, i;
+
+        priority = _menuEl.querySelector("[name='movementType']:checked");
+        priority = priority ? priority.value : null;
+        if (!priority) {
+            return MovementTracker.TERRAIN_TYPES[terrain].speeds;
+        }
+
+        result = clone(MovementTracker.TERRAIN_TYPES[terrain].speeds);
+
+        // Find the index of priority and move it to the start the start.
+        for (i = 0; i < result.length; i++) {
+            // account for any modifers like "walk|2"
+            if (result[i].split("|")[0] === priority) {
+                priority = result[i];
+                break;
+            }
+        }
+        // Can't use this movement for this terrain.
+        if (i >= result.length) {
+            return result;
+        }
+        result.splice(i, 1);
+        result.unshift(priority);
+
+        return result;
+    };
+    
+    /**
      * Calculates whether the mob can reach the given point this turn, then moves them.
      * @param {HTMLElement} current tile the mob is currently on.
      * @param {HTMLElement} candidate tile the mob tries to reach.
@@ -327,7 +364,7 @@ loadExternalScript("public/combatMap.js");
      * @returns {boolean} true if point can be reached.
      */
     attemptMove = function(current, candidate, mob, makeAttempt) {
-        var distance, els, speeds, i, j, k, x, y, value, total, startDistance;
+        var distance, els, speeds, i, j, k, x, y, value, total, startDistance, speedOrder;
         els = _menuEl.querySelectorAll("[name='movementType']");
         speeds = {};
         for (i = 0; i < els.length; i++) {
@@ -364,13 +401,15 @@ loadExternalScript("public/combatMap.js");
             if (!distance.hasOwnProperty(k)) {
                 continue;
             }
+
+            speedOrder = getSpeedPriority(k);
             // Use the best speed we have first (eg. swimming for water)
-            for (i = 0; i < MovementTracker.TERRAIN_TYPES[k].speeds.length; i++) {
+            for (i = 0; i < speedOrder.length; i++) {
                 startDistance = distance[k];
                 if (distance[k] <= 0) {
                     break;
                 }
-                value = (MovementTracker.TERRAIN_TYPES[k].speeds[i] || []).split("|");
+                value = (speedOrder[i] || []).split("|");
                 if (!speeds[value[0]]) {
                     continue;
                 }

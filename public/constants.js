@@ -9,22 +9,22 @@
         normal: {
             text : "Normal",
             colour : "rgba(0,0,0,0)",
-            speeds: ["fly", "walk"]
+            speeds: ["walk", "fly"]
         },
         difficult : {
             text : "Difficult",
             colour : "#CCCCCC",
-            speeds: ["fly","walk|2"]
+            speeds: ["walk|2", "fly"]
         },
         climbable: {
             text: "Climbable",
             colour: "#DDAAAA",
-            speeds: ["fly", "climb"]
+            speeds: ["climb", "fly"]
         },
         swimable: {
             text: "Swimable",
             colour: "#0000FF",
-            speeds: ["fly", "swim"]
+            speeds: ["swim", "fly"]
         },
         impassable: {
             text: "Impassable",

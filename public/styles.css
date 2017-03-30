@@ -1,3 +1,5 @@
+/** Normalise **/
+
 .hidden { display: none !important; }
 :focus {outline: none;}
 ::-moz-focus-inner {border: 0;}
@@ -11,6 +13,29 @@ input[type='number']::-webkit-outer-spin-button {
     margin: 0;
 }
 
+ul, ol {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+label {
+    cursor: pointer;
+}
+
+button {
+    background-color: inherit;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+}
+
+    button:disabled {
+        cursor: default;
+    }
+
+
+/** General Controls **/
+
 .form .ctrl-thickButton {
     margin-left: 0;
 }
@@ -23,32 +48,32 @@ input[type='number']::-webkit-outer-spin-button {
 .ctrl-labelledNumber {
     position: relative;
     display: inline-block;
+    background-color: inherit;
 }
 
     .centre > .ctrl-labelledNumber {
         text-align: center;
         display: block;
         margin: 0 auto;
-        width: 3rem;
+        width: 3.5rem;
     }
     .ctrl-labelledNumber > input,
     .ctrl-labelledNumber > .value {
         font-size: x-large;
-        width: 3rem;
-        height: 3rem;
-        line-height: 3rem;
+        width: 3.5rem;
+        height: 3.5rem;
+        line-height: 3.5rem;
         text-align: center;
         display: inline-block;
-    }
-
-    /* Native input border colour */
-    .ctrl-labelledNumber > .value {
+        background-color: transparent;
         border: 2px rgb(238, 238, 238) ridge;
     }
 
     .ctrl-labelledNumber > label,
     .ctrl-labelledNumber > .label {
-        width: 3rem;
+        width: 3.5rem;
+        height: 100%;
+        z-index: -1;
         left: 0;
         position: absolute;
         top: 2px;
@@ -56,36 +81,41 @@ input[type='number']::-webkit-outer-spin-button {
         font-size: small;
         font-weight: bold;
         padding: 0 3px;
+        background-color: transparent;
     }
 
-/** Main Layout **/
-body {
-    display: table;
-    width: 100%;
-    font-family: sans-serif;
-    margin: 10px;
+.ctrl-radioBoxButton {}
+
+    .ctrl-radioBoxButton > input[type='radio'] {
+        display: none;
+    }
+
+    .ctrl-radioBoxButton > label {
+        display: inline-block;
+        width: 3.5rem;
+        height: 3.5rem;
+        border: 1px solid black;
+        z-index: auto;
+    }
+
+    .ctrl-radioBoxButton > input:checked + label {
+        border: 3px solid gray;
+    }
+
+.ctrl-radioBoxButton.ctrl-labelledNumber > .value {
+    border: none;
 }
-    body > * {
-        display : table-cell;
-    }
-    body > article {}
-    body > aside:first-child {
-        width: 30%;
-    }
 
-    body > aside:first-child > * {
-        display: table-row;
-        height: 200px;
-    }
-    
-    body > aside:first-child > * > section {
-        display: table-cell;
-        padding-left: 10px;
-        padding-right: 10px;
-    }
+.ctrl-radioBoxButton.ctrl-labelledNumber > label,
+.ctrl-radioBoxButton.ctrl-labelledNumber > .label {
+    box-sizing: border-box;
+}
 
 .ctrl-column {
     display: inline-block;
+}
+.ctrl-row {
+    display: block;
 }
 
 .ctrl-coordinate {
@@ -193,14 +223,30 @@ body {
         border-style: solid;
     }
 
+.ctrl-control {
+    background-color: buttonface;
+    border: 1px solid black;
+    padding: 1px 6px;
+    font-family: monospace;
+}
+
 .ctrl-thickButton {
     display: inline-block;
-    height: 3rem;
-    width: 3rem;
-    line-height: 3rem;
-    margin-left: 1rem;
+    height: 3.5rem;
+    width: 3.5rem;
+    line-height: 3.5rem;
+    margin-top: 0.5rem;
+    margin-left: 0.5rem;
     vertical-align: text-bottom;
+
+    background-color: buttonface;
+    border: 1px solid black;
 }
+
+    .ctrl-thickButton:disabled {
+        color: graytext;
+        border-width: 0;
+    }
 
 .ctrl-flat {
     display: block;
@@ -209,6 +255,14 @@ body {
     margin: 1px;
     text-align: center;
 }
+    button.ctrl-flat {
+        background-color: buttonface;
+        border: 1px solid black;
+    }
+    button.ctrl-flat:disabled {
+        color: graytext;
+        border-width: 0;
+    }
 
 .ctrl-textBox {
     display: block;
@@ -218,6 +272,61 @@ body {
     text-align: center;
 }
 
+.ctrl-modal {
+    position: fixed;
+    display: block;
+    top: 200px;
+
+    border: black 2px solid;
+    background-color: white;
+    padding: 10px;
+
+    -webkit-transition: opacity 2s ease-in, visibility 2s step-end;
+    -moz-transition: opacity 2s ease-in, visibility 2s step-end;
+    -o-transition: opacity 2s ease-in, visibility 2s step-end;
+    -ms-transition: opacity 2s ease-in, visibility 2s step-end;
+    transition: opacity 2s ease-in, visibility 2s step-end;
+    opacity: 0;
+    visibility: hidden;
+}
+
+    .ctrl-modal.active {
+        -webkit-transition: opacity 0.5s ease-in;
+        -moz-transition: opacity 0.5s ease-in;
+        -o-transition: opacity 0.5s ease-in;
+        -ms-transition: opacity 0.5s ease-in;
+        transition: opacity 0.5s ease-in;
+        opacity: 1;
+        visibility: visible;
+    }
+
+/** Main Layout **/
+body {
+    display: table;
+    width: 100%;
+    font-family: sans-serif;
+    margin: 10px;
+}
+    body > * {
+        display : table-cell;
+    }
+    body > article {}
+    body > aside:first-child {
+        width: 30%;
+    }
+
+    body > aside:first-child > * {
+        display: table-row;
+        height: 200px;
+    }
+    
+    body > aside:first-child > * > section {
+        display: table-cell;
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+
+/** Application Specific **/
 
 .initiativeList {
     list-style-type: none;
@@ -396,51 +505,6 @@ body {
 
     .ctrl-combatMap tr:nth-child(2) > td{
         border-top-style: solid;
-    }
-
-.ctrl-radioBoxButton {}
-
-    .ctrl-radioBoxButton > input[type='radio'] {
-        display: none;
-    }
-
-    .ctrl-radioBoxButton > label {
-        display: inline-block;
-        width: 50px;
-        height: 50px;
-        border: 1px solid black;
-    }
-
-    .ctrl-radioBoxButton > input:checked + label {
-        border: 3px solid gray;
-    }
-
-.ctrl-modal {
-    position: fixed;
-    display: block;
-    top: 200px;
-
-    border: black 2px solid;
-    background-color: white;
-    padding: 10px;
-
-    -webkit-transition: opacity 2s ease-in, visibility 2s step-end;
-    -moz-transition: opacity 2s ease-in, visibility 2s step-end;
-    -o-transition: opacity 2s ease-in, visibility 2s step-end;
-    -ms-transition: opacity 2s ease-in, visibility 2s step-end;
-    transition: opacity 2s ease-in, visibility 2s step-end;
-    opacity: 0;
-    visibility: hidden;
-}
-
-    .ctrl-modal.active {
-        -webkit-transition: opacity 0.5s ease-in;
-        -moz-transition: opacity 0.5s ease-in;
-        -o-transition: opacity 0.5s ease-in;
-        -ms-transition: opacity 0.5s ease-in;
-        transition: opacity 0.5s ease-in;
-        opacity: 1;
-        visibility: visible;
     }
 
 #turn > .turnHeading {

@@ -44,7 +44,7 @@ var a = function() {
         if (typeof target === "string") {
             target = document.querySelectorAll(target);
         }
-        if (!target.length) {
+        if (!target.length && target.length !== 0) {
             target = [target];
         }
         if (!_pageEvents[namespace]) {
@@ -111,22 +111,31 @@ var a = function() {
     };
 
     /**
-     * Makes a clone of an object.
+     * Makes a clone of an object or array.
      * @param {object} object
-     * @param {boolean} full also copies the prototype etc. 
+     * @param {boolean} full also copies the prototype etc.
      * @returns {object} the clone.
      */
     clone = function(object, full) {
         var k, result;
-        result = {};
+        if (Array.isArray(object)) {
+            result = [];
 
-        for (k in object) {
-            if(!full && !object.hasOwnProperty(k)) {
-                continue;
+            for (k = 0; k < object.length; k++) {
+                result.push(object[k]);
             }
-            result[k] = object[k];
+            return result;
+        } else {
+            result = {};
+
+            for (k in object) {
+                if(!full && !object.hasOwnProperty(k)) {
+                    continue;
+                }
+                result[k] = object[k];
+            }
+            return result;
         }
-        return result;
     };
 
     /**
