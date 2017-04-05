@@ -845,6 +845,9 @@ loadExternalScript("public/combatMap.js");
         if (mob) {
             pageContext.removeMob(mob);
             mob = void 0;
+        } else if (data.mob_type === "pc") {
+            // Ensure mob appers correctly with initiative.
+            initiativeContext.addMob(data, true);
         }
         if (!addMob(clone(data), event) && mob) {
             // Weren't able to move because of terrain etc restrictions,
@@ -982,7 +985,7 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
-     * Moves the in-context mob to the clicked location.
+     * Moves the in-context mob to the next clicked location.
      */
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
