@@ -32,6 +32,7 @@ server.get(/session\/[0-9]+\/turn/, getCurrentTurn);
 
 server.get(/session\/[0-9]+\/players/, getPlayerList);
 server.post("session", postSession);
+server.post("session\/[0-9]+\/broadcast/", broadcastMessage);
 server.put(/session\/[0-9]+\/map\/add/, addTerrain);
 server.get(/session\/[0-9]+\/map/, downloadMap);
 server.put(/session\/[0-9]+\/map/, uploadMap);
@@ -108,6 +109,18 @@ function downloadMap(req, res) {
     sessionId = getEntityId("session", req);
     return serveJSON(res, socketServerControl.cache(`map-${sessionId}`));
 }
+
+/**
+ * Sends message to all clients in the session.
+ */
+function broadcastMessage(req, res) {
+    var message = {};
+    message[req.body.message_type] = req.body.message_body;
+    socketServerControl.broadcastJSON(message, [req.body.socket_id]);
+
+    res.writeHead(200);
+    res.end();
+};
 
 /**
  * Notifies all that the next turn has started.

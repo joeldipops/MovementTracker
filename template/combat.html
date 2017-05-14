@@ -601,7 +601,7 @@ loadExternalScript("public/combatMap.js");
         y1 = mob.y;
         pageContext.removeMob(mob);
 
-        initiativeContext.addMob(arguments[0])
+        initiativeContext.addMob(arguments[0]);
 
         x = parseInt(location.getAttribute("data-x"));
         y = parseInt(location.getAttribute("data-y"));
@@ -848,6 +848,12 @@ loadExternalScript("public/combatMap.js");
         } else if (data.mob_type === "pc") {
             // Ensure mob appers correctly with initiative.
             initiativeContext.addMob(data, true);
+        } else {
+            // Notify all of new mob's data.
+            sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
+                message_type : "player_update",
+                message_body : data
+            });
         }
         if (!addMob(clone(data), event) && mob) {
             // Weren't able to move because of terrain etc restrictions,
@@ -1108,7 +1114,7 @@ loadExternalScript("public/combatMap.js");
                 return;
             }
 
-            init = parseInt(document.querySelector("[name='npcInitiative']").value) || 1;
+            init = parseInt(document.querySelector("[name='npcInitiative']").value) || 0;
 
             data = {
                 character_name : name,
