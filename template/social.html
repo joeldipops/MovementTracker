@@ -88,7 +88,9 @@ window.initiativeContext = {};
         result.colour = li.style.color;
         result.character_name = li.querySelector(".mobName").innerHTML;
         result.initiative = parseInt(li.getAttribute("data-initiative"));
-        result.potential = parseInt(li.getAttribute("data-potential"));
+        if (li.hasAttribute("data-potential")) {
+            result.potential = parseInt(li.getAttribute("data-potential"));
+        }
         result.order = parseInt(li.getAttribute("data-order"));
         result.speed = {};
 
@@ -173,17 +175,18 @@ window.initiativeContext = {};
     };
 
     /**
-     * Removes a mob from the li     st.
+     * Removes a mob from the list.
      * @param {object} data describes the mob.
      */
-    removePlayer = function(data) {
+    removePlayer = function(data, fromCombat) {
         var li, id;
+        fromCombat = fromCombat || data.from_combat;
         id = isNaN(data.player_id) ? data.id : data.player_id;
         li = _listEl.querySelector("li[data-id='" + id + "']");
         if (!li) {
             return;
         }
-        if (data.from_combat && document.body.hasAttribute("data-isDm")) {
+        if (fromCombat) {
             // DM will keep players in list unless forced.
             // But should still ignore them when calculating next player.
             if (li.hasAttribute("data-initiative")) {

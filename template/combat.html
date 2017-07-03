@@ -671,7 +671,11 @@ loadExternalScript("public/combatMap.js");
             fn(data["terrain_update"]);
         }
         if (data["player_remove"]) {
-            pageContext.removeMob(data["player_remove"]);
+            if (data["player_remove"].from_combat) {
+                toggleMob(initiativeContext.getMobData(data["player_remove"].id), true);
+            } else {
+                pageContext.removeMob(data["player_remove"]);
+            }
         }
         if (data["player_react"]) {
             onReactionUsed(data["player_react"]);
@@ -995,7 +999,7 @@ loadExternalScript("public/combatMap.js");
      */
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
-        if (!data.initiative) {
+        if (!data.initiative && data.initiative !== 0) {
             data.initiative = data.potential;
             initiativeContext.addMob(data);
         }
@@ -1031,17 +1035,29 @@ loadExternalScript("public/combatMap.js");
     /**
      * Shows or hides an existing mob from the map.
      * @param {object} data Describes the mob.
+     * @param {boolean} silent Won't send a http request if true.
      */
-    toggleMob = function(data) {
-        pageContext.removeMapEvents();
-        pageContext.removeMob(data);
-        if (data.mob_type === "npc") {
-            initiativeContext.removeMob(data);
-        } else {
-            onPositionClicked(data);
+    toggleMob = function(data, silent) {
+        var inCombat = document.body.getAttribute("data-state") === "combat";
+        if (data.mob_type == "npc" || !inCombat) {
+            pageContext.removeMapEvents();
+            pageContext.removeMob(data);
         }
 
-        if (document.body.getAttribute("data-state") === "combat") {
+        if (data.mob_type === "pc") {
+            // DM can place a just toggled mob back on the map.
+            if (document.body.hasAttribute("data-isDM")) {
+                onPositionClicked(data);
+            }
+
+            if (inCombat) {
+                pageContext.addCondition(data.id, MovementTracker.CONDITIONS.down);
+            }
+        }
+
+        initiativeContext.removeMob(data, data.mob_type === "pc");
+
+        if (!silent && inCombat) {
             sendHttpRequest(
                 "session/" + window.sessionId + "/player/" + data.id + "/remove",
                 "PUT"
@@ -1136,7 +1152,7 @@ loadExternalScript("public/combatMap.js");
 
             pageContext.removeMapEvents();
             // the data that we bind the the map event
-            pageContext.onMapEvent("td > button", "click", addMob.bind({}, data));
+            pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
         });
 
         // When position/location button is clicked for a mob, we can select a cell.

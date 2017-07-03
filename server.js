@@ -268,8 +268,8 @@ function removePlayerFromCombat(req, res) {
         "player_remove" : {
             id : id,
             from_combat: true
-        }
-    });
+        }}, [req.body.socket_id]
+    );
     res.writeHead(200);
     res.end();
 }
@@ -316,7 +316,6 @@ function getPlayerList(req, res) {
 
     body = { players : [] };
     cached = socketServerControl.cache(`currentPlayerList-${sessionId}`);
-
     for (var k in cached) {
         if (!cached.hasOwnProperty(k)) {
             continue;
@@ -362,6 +361,8 @@ function postSession(req, res) {
 }
 
 function removePlayer(data) {
+    var cached = socketServerControl.cache(`currentPlayerList-${data.session_id}`);
+    delete cached[data.socket_id];
     db.runQuery(queries.deletePlayer, [data.player_id], function() {});
 };
 

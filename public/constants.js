@@ -5,6 +5,13 @@
     window.MovementTracker.UNITS_PER_TILE = 5;
     window.MovementTracker.DEFAULT_WALK_SPEED = 30;
 
+    window.MovementTracker.CONDITIONS = {
+        down : "down",
+        poisoned: "poisoned",
+        frightened: "frightened",
+        charmed: "charmed"
+    };
+
     window.MovementTracker.TERRAIN_TYPES = {
         normal: {
             text : "Normal",

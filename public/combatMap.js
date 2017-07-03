@@ -1,5 +1,6 @@
 (function combatMapScript() {
-    var _mapEvents, _mapEl, _mobs, _mobIndex, isIdEqual;
+    var _mapEvents, _mapEl, _mobs, _mobIndex,
+        isSameMob, toggleConditions;
 
     _mapEl = document.getElementById("map");
     _mapEvents = [];
@@ -31,7 +32,37 @@
         }
 
         return first.id.toString() === second.id.toString();
-    }
+    };
+
+    /**
+     * Displays a mob as having the given conditions or removes them.
+     * @param {string} id Identifies the mob.
+     * @param {string|array of string} conditions lists all the conditions to add or remove.
+     * @param {boolean} isToAdd true to add the conditions, false to remove them.
+     */
+    toggleConditions = function(id, conditions, isToAdd) {
+        var i, fnName;
+        el = _mapEl.querySelector("[data-id='" + id + "']");
+        if (!el) {
+            return;
+        }
+
+        if (typeof conditions === "string") {
+            conditions = [conditions];
+        }
+
+        fnName = isToAdd ? "add" : "remove";
+
+        for (i = 0; i < conditions.length; i++) {
+            switch(conditions[i]) {
+                case MovementTracker.CONDITIONS.down:
+                    el.classList[fnName]("down");
+                    break;
+                defaults:
+                    break;
+            }
+        }
+    };
 
     /**
      * Renders a grid according to data, setting each td as the html in template.
@@ -234,6 +265,24 @@
         var el = pageContext.getCell(x, y);
         el.setAttribute("data-type", type);
         el.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
+    };
+
+    /**
+     * Sets the mob to be displayed with the given condition/s.
+     * @param {string} id Identifies the mob.
+     * @param {string|array of string} conditions The conditions the mob should have.
+     */
+    pageContext.addCondition = function(id, conditions) {
+        toggleConditions(id, conditions, true);
+    };
+
+    /**
+     * Sets the mob to no longer be displayed with the given condition/s.
+     * @param {string} id Identifies the mob.
+     * @param {string|array of string} conditions The conditions the mob should not have.
+     */
+    pageContext.removeCondition = function(id, conditions) {
+        toggleConditions(id, conditions, false);
     };
 
     /**

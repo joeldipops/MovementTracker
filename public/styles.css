@@ -434,6 +434,14 @@ body {
             top: 50%;
         }
 
+        /* Status Conditions */
+        .ctrl-combatCell > .mob.down {
+            -webkit-transform: rotate(90deg);
+            -moz-transform: rotate(90deg);
+            -ms-transform: rotate(90deg);
+            transform: rotate(90deg);
+        }
+
     .ctrl-combatCell > .hasTurn {
         font-weight: bold;
     }
