@@ -361,8 +361,37 @@ function postSession(req, res) {
 }
 
 function removePlayer(data) {
-    var cached = socketServerControl.cache(`currentPlayerList-${data.session_id}`);
+    var cached, map, k, i, mob, indices;
+    // remove the player from the cache
+    cached = socketServerControl.cache(`currentPlayerList-${data.session_id}`);
     delete cached[data.socket_id];
+
+    // and from the map's list of mobs.
+    map = socketServerControl.cache(`map-${data.session_id}`);
+
+    if (map && map.mobs) {
+        indices = [];
+        // k is the map co-ordinate.
+        for (k in map.mobs) {
+            if (!map.mobs.hasOwnProperty(k)) {
+                continue;
+            }
+
+            // Iterate backwards so splicing an earlier element won't move a later one
+            // in the unexpected case that the same mob appears twice t the same co-ord.
+            for (i = map.mobs[k].length - 1; i >= 0 ; i--) {
+                if (map.mobs[k][i].id.toString() === data.id.toString()) {
+                    indices.push({ k : k, i : i});
+                }
+            }
+        }
+
+        for (i = 0; i < indices.length; i++) {
+            // Remove the element;
+            map.mobs[indices[i].k].splice(indices[i].i, 1);
+        }
+    }
+
     db.runQuery(queries.deletePlayer, [data.player_id], function() {});
 };
 

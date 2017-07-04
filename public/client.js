@@ -18,10 +18,12 @@ var a = function() {
      * @param {number} milliseconds to show alert for. Will not automatically hide if none specified.
      */
     showAlert = function(content, timeout) {
-        var hideAlert = function() {
+        var el, hideAlert;
+        el = document.body.querySelector(".ctrl-modal");
+
+        hideAlert = function() {
             el.classList.remove("active");
         };
-        var el = document.body.querySelector(".ctrl-modal");
         el.innerHTML = content;
         el.style.left = Math.floor((document.body.clientWidth  - el.clientWidth) / 2) + "px";
         el.classList.add("active");
