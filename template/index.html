@@ -6,7 +6,7 @@
 </script>
 
 <h1>Welcome</h1>
-<input class="ctrl-textBox" type="text" name="playerName" placeholder="ENTER YOUR NAME" />
+<input class="ctrl-textBox" type="text" name="characterName" placeholder="ENTER NAME" />
 <fieldset class="form" id="dmOptions">
     <legend>DM the game</legend>
     <div class="hidden">DM Already Set</div>
@@ -14,10 +14,12 @@
 </fieldset>
 <fieldset class="form" id="playerOptions">
     <legend>OR set up your character</legend>
+    <!-- We don't care about player vs character name right now.  Just let players play.
     <div>
         <input class="ctrl-textBox" type="text" name="characterName" placeholder="CHARACTER NAME" />
         <input type="hidden" name="race" value="human" />
     </div>
+    -->
     <!--
     <div>
         <label>Race</label>
@@ -64,6 +66,9 @@
 
     document.body.setAttribute("data-state", "lobby");
 
+    /**
+     * Hides the DM button when one has been set.
+     */
     hideDmButton = function() {
         if (!mainEl) { return false;}
         el = mainEl.querySelector("#dmOptions > [name='start']");
@@ -120,12 +125,11 @@
         var dmButton, playerButton;
         dmButton = mainEl.querySelector("[name='start'][data-player_type='dm']");
         playerButton = mainEl.querySelector("[name='start'][data-player_type='player']");
-        if (mainEl.querySelector("[name='playerName']").value) {
+        if (mainEl.querySelector("[name='characterName']").value) {
              dmButton.removeAttribute("disabled");
              dmButton.disabled = false;
-
              playerButton.removeAttribute("disabled");
-             playerButton.disabled = !(document.querySelector("input[name='characterName']").value);
+             playerButton.disabled = false;
         } else {
             dmButton.disabled = true;
             playerButton.disabled = true;
@@ -138,7 +142,7 @@
     onClickStart = function(event) {
         var body, result, k;
         body = {
-            player_name : mainEl.querySelector("[name='playerName']").value,
+            player_name : mainEl.querySelector("[name='characterName']").value,
             player_type : event.currentTarget.getAttribute("data-player_type")
         };
 
