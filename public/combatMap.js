@@ -1,6 +1,6 @@
 (function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex,
-        isSameMob, toggleConditions;
+        isSameMob, toggleConditions, getTerrainsJson, getMobsJson;
 
     _mapEl = document.getElementById("map");
     _mapEvents = [];
@@ -12,13 +12,54 @@
         var el = document.head.querySelector("meta[name='viewport']");
         el.setAttribute("content", "user-scalable=0");
     });
-    
+
     onEvent(_mapEl, "touchend", function() {
         setTimeout(function() {
             var el = document.head.querySelector("meta[name='viewport']");
             el.setAttribute("content", "user-scalable=1");
         }, 2000);
     });
+
+    /**
+     * Converts the terrains on the map into a format that can be consumed as json.
+     * @returns {object} the hash of terrains.
+     */
+    getTerrainsJson = function() {
+        var terrains, result;
+        terrains = _mapEl.querySelectorAll(".terrain[data-x]:not([data-type='normal'])");
+        result = {};
+        for (i = 0; i < terrains.length; i++) {
+            x = terrains[i].getAttribute("data-x");
+            y = terrains[i].getAttribute("data-y");
+            result[x + "," + y] = {
+                type : terrains[i].getAttribute("data-type"),
+                x : x,
+                y: y
+            };
+        }
+
+        return result;
+    };
+    
+    /**
+     * Converts the mobs on the map into a format that can be consumed as json.
+     * @returns {object} the hash of mobs.
+     */
+    getMobsJson = function() {
+        var result = {};
+        for (k in _mobIndex) {
+            if (!_mobIndex.hasOwnProperty(k)) {
+                continue;
+            }
+            key = _mobIndex[k].x + "," + _mobIndex[k].y;
+            if (!result[key]) {
+                result[key] = [];
+            }
+
+            result[key].push(pageContext.getMobWithId(k));
+        }
+        return result;
+    };
 
     /**
      * Compares mobs by id..
@@ -65,6 +106,55 @@
     };
 
     /**
+     * Renders the map, but moves any mobs and deletes any terrains that no longer fit
+     */
+    pageContext.resizeMap = function(data, template) {
+        var k, oldHeight, oldWidth, mob, mobsData, offset, isOffMap, key;
+
+        if (!(isNatural(data.width)) && isNatural(data.height)) {
+            return ;
+        }
+
+        oldHeight = parseInt(_mapEl.getAttribute("data-height")) || 0;
+        oldWidth = parseInt(_mapEl.getAttribute("data-width")) || 0;
+
+        mobsData = getMobsJson();
+
+        if (data.width < oldWidth || data.height < oldHeight) {
+            // see if any mobs have fallen off the edge of the map, and squeeze them back on.
+            for (k in _mobIndex) {
+                if (!_mobIndex.hasOwnProperty(k)) {
+                    continue;
+                }
+
+                mob = pageContext.getMobWithId(k);
+                offset = MovementTracker.MOB_SIZES[mob.size] ? MovementTracker.MOB_SIZES[mob.size].tiles - 1 : 0;
+
+                if (mob.x + offset > data.width) {
+                    isOffMap = true;
+                    mob.x = Math.max(data.width - offset, 0);
+                }
+                if (mob.y + offset > data.height) {
+                    isOffMap = true;
+                    mob.y = Math.max(data.height - offset, 0);
+                }
+
+                if (isOffMap) {
+                    key = mob.x + "," + mob.y;
+                    mobsData[key] = mobsData[key] || [];
+                    mobsData[key].push(mob);
+                    isOffMap = false;
+                }
+            }
+        }
+
+        data.mobs = mobsData;
+        data.terrains = getTerrainsJson();
+
+        return pageContext.renderMap(data, template);
+    };
+
+    /**
      * Renders a grid according to data, setting each td as the html in template.
      * @param {object} data contains the width and height of the map.
      * @param {string} template a html template.
@@ -76,11 +166,11 @@
         // Reset since it's a fresh render..
         _mobs = {};
         _mobIndex = {};
-            
-        _mapEL = _mapEl || document.getElementById("map");
+
+        _mapEl = _mapEl || document.getElementById("map");
     
-        while(_mapEL.firstChild) {
-            _mapEL.removeChild(_mapEL.firstChild);
+        while(_mapEl.firstChild) {
+            _mapEl.removeChild(_mapEl.firstChild);
         }
 
         _mapEl.setAttribute("data-width", data.width);
@@ -88,7 +178,7 @@
 
         for(y = 0; y < data.height + 1; y++) {
             newTr = document.createElement("tr");
-            _mapEL.appendChild(newTr);
+            _mapEl.appendChild(newTr);
             for (x = 0; x < data.width + 1; x++) {
                 if (y === 0 || x === 0) {
                    // Numbered headings along the top and left.
@@ -353,31 +443,10 @@
         };
 
         // Find all the abnormal terrains.
-        terrains = _mapEl.querySelectorAll(".terrain[data-x]:not([data-type='normal'])");
-        result.terrains = {};
-        for (i = 0; i < terrains.length; i++) {
-            x = terrains[i].getAttribute("data-x");
-            y = terrains[i].getAttribute("data-y");
-            result.terrains[x + "," + y] = {
-                type : terrains[i].getAttribute("data-type"),
-                x : x,
-                y: y
-            };
-        }
+        result.terrains = getTerrainsJson();
 
         //Find all the mobs.
-        result.mobs = {};
-        for (k in _mobIndex) {
-            if (!_mobIndex.hasOwnProperty(k)) {
-                continue;
-            }
-            key = _mobIndex[k].x + "," + _mobIndex[k].y;
-            if (!result.mobs[key]) {
-                result.mobs[key] = [];
-            }
-
-            result.mobs[key].push(pageContext.getMobWithId(k));
-        }
+        result.mobs = getMobsJson();
 
         return result;
     };

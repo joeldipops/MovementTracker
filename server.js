@@ -114,9 +114,7 @@ function downloadMap(req, res) {
  * Sends message to all clients in the session.
  */
 function broadcastMessage(req, res) {
-    var message = {};
-    message[req.body.message_type] = req.body.message_body;
-    socketServerControl.broadcastJSON(message, [req.body.socket_id]);
+    socketServerControl.broadcastJSON(req.body.message, [req.body.socket_id]);
 
     res.writeHead(200);
     res.end();

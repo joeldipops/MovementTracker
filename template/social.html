@@ -363,7 +363,7 @@ window.initiativeContext = {};
     window.socket.addEventListener("message", onReceiveMessage);
     window.initiativeContext.addMob = addPlayer;
     window.initiativeContext.removeMob = removePlayer;
-    window.initiativeContext.refreshList =refreshList;
+    window.initiativeContext.refreshList = refreshList;
 
     /**
      * Removes any NPCs from the list, but keeps players.
@@ -389,6 +389,18 @@ window.initiativeContext = {};
         }
         return null;
     };
+
+    /**
+     * Gets full data on the mob whose turn it is.
+     * @returns {object} The mob.
+     */
+    window.initiativeContext.getCurrent = function() {
+        var el;
+        if(!(el = _listEl.querySelector(".currentTurn"))) {
+            return null;
+        }
+        return window.initiativeContext.getMobData(el.getAttribute("data-id"));
+    }
 
     /**
      * Subscribes to an event triggered by some operation or interation on the list.

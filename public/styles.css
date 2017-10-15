@@ -355,6 +355,10 @@ body {
     .initiativeList > li > [name='toggleMob'],
     .initiativeList > li > [name='setTurn'] { display: none; }
 
+    body[data-state='setup'] [name='updateMap'] {
+        display: none;
+    }
+
     body[data-state='setup'] .initiativeList > li {}
         body[data-state='setup'] .initiativeList > li > [name='position'],
         body[data-state='setup'] .initiativeList > li > [name='toggleMob'] { display: inline-block; }

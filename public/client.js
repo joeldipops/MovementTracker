@@ -139,6 +139,15 @@ var a = function() {
             return result;
         }
     };
+    
+    /**
+     * Checks if value is a ntural number,
+     * @param {number} value to check.
+     * @returns {boolean} true if 0 or a postive integer, false otherwise.
+     */
+    isNatural = function(value) {
+        return Number.isInteger(value) && value >= 0;
+    };
 
     /**
      * Calls parse int with the default r value of 10

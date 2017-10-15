@@ -85,6 +85,7 @@ loadExternalScript("public/combatMap.js");
                     <input id="mapHeight" type="number" name="mapHeight" value="12" placeholder="height" />
                 </div>
             </div>
+            <button class="ctrl-flat" name="updateMap">UPDATE</button>
         </fieldset>
 
         <input type="radio" name="controlTab" id="mobControlsTab" />
@@ -136,8 +137,8 @@ loadExternalScript("public/combatMap.js");
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
-        onMoveSelected, onReactClicked, onPositionClicked,
-        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, generateMap, toggleMob, setTurn, isTileFreeForSize,
+        onMoveSelected, onReactClicked, onPositionClicked, onMapSizeChange, onUpdateMapClick,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, resetMap, toggleMob, setTurn, isTileFreeForSize,
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -637,7 +638,7 @@ loadExternalScript("public/combatMap.js");
         window.initiativeContext.toggleReaction(data.id, true);
         onMoveSelected(data);
     };
-    
+
     /**
      * Updates the map when a player_move event is received.
      */
@@ -707,7 +708,7 @@ loadExternalScript("public/combatMap.js");
                 return false;
             }
             renderMenu();
-            generateMap();
+            resetMap();
             onEvent(window.socket, "message", onMessageReceived);
             return true;
         });
@@ -855,8 +856,7 @@ loadExternalScript("public/combatMap.js");
         } else {
             // Notify all of new mob's data.
             sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
-                message_type : "player_update",
-                message_body : data
+                message : { player_update : data }
             });
         }
         if (!addMob(clone(data), event) && mob) {
@@ -983,7 +983,7 @@ loadExternalScript("public/combatMap.js");
     /**
      * Generates a grid based on the user's request.
      */
-    generateMap = function() {
+    resetMap = function() {
         var width, height;
         width = parseInt(document.querySelector("[name='mapWidth']").value);
         height = parseInt(document.querySelector("[name='mapHeight']").value);
@@ -1170,14 +1170,46 @@ loadExternalScript("public/combatMap.js");
             pageContext.onMapEvent("td > button", "click", addTerrain);
         });
 
-        onEvent("[name='mapWidth']", "change", generateMap);
-        onEvent("[name='mapHeight']", "change", generateMap);
+        onEvent("[name='mapWidth']", "change", onMapSizeChange);
+        onEvent("[name='mapHeight']", "change", onMapSizeChange);
+        onEvent("button[name='updateMap']", "click", onUpdateMapClick);
 
         onEvent("button[name='clear']", "click", onClearClicked.bind({}, false));
 
         onEvent("button[name='start']", "click", onStartClicked);
 
         onEvent("button[name='reset']", "click", onResetClicked);
+    };
+
+    /**
+     * Keeps the map up to date with any size changes.
+     */
+    onMapSizeChange = function() {
+        if (document.body.getAttribute("data-state") === "setup") {
+            resetMap();
+        }
+    };
+
+    /**
+     * Updates the map locally and notifies players
+     */
+    onUpdateMapClick = function() {
+        var width, height, turn;
+        width = parseInt(document.querySelector("[name='mapWidth']").value);
+        height = parseInt(document.querySelector("[name='mapHeight']").value);
+        pageContext.resizeMap({
+            width: width,
+            height: height
+        }, _template);
+
+        turn = initiativeContext.getCurrent();
+        return sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
+            message : { map_update : pageContext.mapToJSON() }
+        })
+        .then(function() {
+            // Ensure that current players turn continues.
+            setTurn(turn);
+        });
     };
     
 })();
