@@ -149,17 +149,19 @@ function getCurrentTurn(req, res) {
  * Creates or updates a player.
  */
 function putPlayer(req, res) {
-    var dbParams, query, path, sessionId, cached;
+    var dbParams, query, path, sessionId, cached, playerName;
 
     path = url.parse(req.url).pathname;
     sessionId = getEntityId("session", path);
     playerId = getEntityId("player", path) || req.body.player_id ||
         (req.body.socket_id && socketServerControl.cache(req.body.socket_id) && socketServerControl.cache(req.body.socket_id).player_id);
 
+    playerName = req.body.player_name || req.body.character_name;
+
     dbParams = [
         sessionId,
         req.body.socket_id,
-        req.body.player_name,
+        playerName,
         req.body.character_name,
         req.body.player_type,
         req.body.colour,
@@ -188,7 +190,8 @@ function putPlayer(req, res) {
             player_type : req.body.player_type,
             colour: req.body.colour,
             size : req.body.size || "medium",
-            speed : req.body.speed
+            speed : req.body.speed,
+            player_name : playerName
         });
         cached = {};
         cached[req.body.socket_id] = true;
@@ -200,7 +203,7 @@ function putPlayer(req, res) {
                 default: messageType="spectator_add";
             }
             message[messageType] = {
-                player_name: req.body.player_name,
+                player_name: playerName,
                 character_name: req.body.character_name,
                 player_id: player.player_id,
                 session_id: sessionId,
