@@ -136,9 +136,9 @@ loadExternalScript("public/combatMap.js");
 (function combatScript() {
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
-        onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainMouseOver, onTerrainClick, onPlayerMove,
+        onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainClick, onPlayerMove,
         onMoveSelected, onReactClicked, onPositionClicked, onMapSizeChange, onUpdateMapClick,
-        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, resetMap, toggleMob, setTurn, isTileFreeForSize,
+        renderDMMenu, addTerrain, addMob, relocateMob, removeMob, resetMap, renderOverlay, toggleMob, setTurn, isTileFreeForMob, 
         _template, _reactTemplate, _menuEl;
 
     _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
@@ -183,12 +183,34 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
+     * Paints the map with areas the mob can and can't reach in a straight line from where they are.
+     * @param {object} mob The mob.
+     */
+    renderOverlay = function(mob) {
+        pageContext.removeClass("reachable");
+        pageContext.removeClass("unreachable");
+
+        pageContext.forEach(function(cell) {
+            var loc, current;
+            loc = pageContext.getMobWithId(mob.id);
+            current = pageContext.getCell(loc.x, loc.y);
+
+            if (attemptMove(current, cell, mob)) {
+                // Set timeout allows for a smoother ux
+                setTimeout(function() {cell.classList.add("reachable");}, 0);
+            } else {
+                setTimeout(function() {cell.classList.add("unreachable");}, 0);
+            }
+        }, true);
+    };
+
+    /**
      * Sets up the map to allow movement during a turn.
      */
     onMoveSelected = function(data) {
         pageContext.removeMapEvents();
-        pageContext.onMapEvent("td > .terrain", "mouseover", onTerrainMouseOver.bind({}, data), "turn");
         pageContext.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data), "turn");
+        renderOverlay(data);
     };
 
     /**
@@ -298,6 +320,10 @@ loadExternalScript("public/combatMap.js");
         var message, el;
         offEvents("turn");
         pageContext.removeMapEvents();
+
+        pageContext.removeClass("reachable");
+        pageContext.removeClass("unreachable");
+
         message = "<h1>" + data.character_name + "'s Turn</h1>";
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
             // DM's turn for NPCs
@@ -382,7 +408,7 @@ loadExternalScript("public/combatMap.js");
         x = parseInt(candidate.getAttribute("data-x"));
         y = parseInt(candidate.getAttribute("data-y"));
 
-        if (!isTileFreeForSize(x, y, mob.size)) {
+        if (!isTileFreeForMob(x, y, mob)) {
             return false;
         }
 
@@ -488,7 +514,9 @@ loadExternalScript("public/combatMap.js");
             return result;
         }
 
-        factor = MovementTracker.UNITS_PER_TILE * 10;
+        // A bigger factor will give a more accurate result but take longer to process.
+        // TODO: See if I can't make any performance improvements when calculating and rendering the shading.
+        factor = MovementTracker.UNITS_PER_TILE * 1;
 
         x1 *= factor;
         x2 *= factor;
@@ -511,6 +539,9 @@ loadExternalScript("public/combatMap.js");
             x = Math.floor(i / factor);
 
             cell = pageContext.getCell(x, y);
+            if (!cell) {
+                continue;
+            }
             cell = cell.getAttribute("data-type");
             if (!result[cell]) {
                 result[cell] = 0;
@@ -562,8 +593,6 @@ loadExternalScript("public/combatMap.js");
             // Update which tile is selected.
             pageContext.removeClass("selected");
             event.currentTarget.classList.add("selected");
-            // Set the colour (important for mobile).
-            onTerrainMouseOver(mob, event);
         } else {
             loc = pageContext.getMobWithId(mob.id);
             attemptMove(pageContext.getCell(loc.x, loc.y), event.currentTarget, mob, true);
@@ -616,6 +645,10 @@ loadExternalScript("public/combatMap.js");
                 "PUT",
                 { x : x, y: y }
             );
+        }
+        // If you just moved, or you as the DM just moved an NPC, reclculate the overlay.
+        if (isEqual(mob.id, window.playerId) || (mob.mob_type === "npc" && document.body.hasAttribute("data-isDm"))) {
+            renderOverlay(mob);
         }
 
         return getDistance(x1, y1, x, y);
@@ -867,18 +900,22 @@ loadExternalScript("public/combatMap.js");
     };
 
     /**
-     * Checks if a mob of a given size can occupy a given location.
+     * Checks if a mob can occupy a given location based on its size.
      * @param {number} x co-ordinate of the tile.
      * @param {number} y co-ordinate of the tile.
      * @param {string} size The code for the size.
      * @returns {boolean} true if can occupy, false otherwise.
      */
-    isTileFreeForSize = function(x, y, size) {
+    isTileFreeForMob = function(x, y, mob) {
         var extant, size;
         extant = pageContext.getMob(x, y);
-        size = MovementTracker.MOB_SIZES[size];
+        size = MovementTracker.MOB_SIZES[mob.size];
 
         for (i = 0; i < (extant ? extant.length : 0); i++) {
+            // Mob is already occupying the space so can occupy by definition.
+            if (mob.id === extant[i].id) {
+                return true;
+            }
             // "a creature cannot enter the same space of another unless they are two sizes smaller or larger.
             if (Math.abs(size.rank - MovementTracker.MOB_SIZES[extant[i].size].rank) <= 1) {
                 return false;
@@ -910,7 +947,7 @@ loadExternalScript("public/combatMap.js");
         x = parseInt(event.currentTarget.getAttribute("data-x"));
         y = parseInt(event.currentTarget.getAttribute("data-y"));
 
-        if (!isTileFreeForSize(x, y, data.size)) {
+        if (!isTileFreeForMob(x, y, data)) {
             return false;
         }
 
@@ -1123,7 +1160,7 @@ loadExternalScript("public/combatMap.js");
 
         // When add npc is clicked, we can select a cell to add them to.
         onEvent("button[name='addNpc']", "click", function() {
-            var name, init, size, k;
+            var name, init, size, k, data;
             name = document.querySelector("[name='npcName']").value;
             // Can't add NPC if missing info.
             if (!name) {
@@ -1134,6 +1171,7 @@ loadExternalScript("public/combatMap.js");
 
             data = {
                 character_name : name,
+                mob_type : "npc",
                 initiative : init,
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {},
@@ -1145,7 +1183,9 @@ loadExternalScript("public/combatMap.js");
                     continue;
                 }
                 data.speed[k] = parseInt(document.querySelector("[name='npcSpeed-" + k + "']").value)
-                    || MovementTracker.DEFAULT_WALK_SPEED * MovementTracker.MOVEMENT_TYPES[k].factor;
+                if (!data.speed[k] && data.speed[k] !== 0) {
+                    data.speed[k] = MovementTracker.DEFAULT_WALK_SPEED * MovementTracker.MOVEMENT_TYPES[k].factor;
+                }
             }
 
             initiativeContext.addMob(data);

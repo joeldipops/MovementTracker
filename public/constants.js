@@ -26,16 +26,17 @@
         climbable: {
             text: "Climbable",
             colour: "#DDAAAA",
-            speeds: ["climb", "fly"]
+            speeds: ["climb", "fly", "walk|2"]
         },
         swimable: {
             text: "Swimable",
             colour: "#0000FF",
-            speeds: ["swim", "fly"]
+            speeds: ["swim", "fly", "walk|2"]
         },
         impassable: {
             text: "Impassable",
             colour: "#000000",
+            speeds: []
         }
     };
 

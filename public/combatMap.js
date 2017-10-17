@@ -354,7 +354,7 @@
     pageContext.setTerrain = function(x, y, type) {
         var el = pageContext.getCell(x, y);
         el.setAttribute("data-type", type);
-        el.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
+        el.parentNode.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
     };
 
     /**
@@ -411,7 +411,8 @@
      */
     pageContext.removeClass = function(name) {
         var i, list;
-        list = _mapEl.getElementsByClassName(name);
+        list = [];
+        list.push.apply(list, _mapEl.getElementsByClassName(name));
         for (i = 0; i < list.length; i++) {
             list[i].classList.remove(name);
         }
@@ -450,4 +451,25 @@
 
         return result;
     };
+
+    /**
+     * Calls a function on every cell in the map.
+     * can be run asynchronously for slower operations.
+     */
+    pageContext.forEach = function(fn, isAsync) {
+        var x, y, cell, size;
+        size = pageContext.getSize();
+        for (x = 1; x <= size.width; x++) {
+            for (y = 1; y <= size.height; y++) {
+                cell = pageContext.getCell(x, y);
+                if (isAsync) {
+                    setTimeout(fn.bind({}, cell), 0)
+                } else {
+                    fn(cell);
+                }
+
+            }
+        }
+    };
+
 })();

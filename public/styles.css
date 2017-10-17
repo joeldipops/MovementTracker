@@ -461,12 +461,12 @@ body {
         border-style: groove;
     }
 
-    .ctrl-combatCell > .terrain.reachable:hover {
-        background-color: rgba(0, 255, 0, 0.4) !important;
+    .ctrl-combatCell > .terrain.reachable {
+        background-color: rgba(0, 255, 0, 0.3) !important;
     }
 
-    .ctrl-combatCell > .terrain.unreachable:hover {
-        background-color: rgba(255, 0, 0, 0.4) !important;
+    .ctrl-combatCell > .terrain.unreachable {
+        background-color: rgba(255, 0, 0, 0.3) !important;
     }
 
 .ctrl-combatMap {

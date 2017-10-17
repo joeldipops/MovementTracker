@@ -120,6 +120,24 @@ var a = function() {
      */
     clone = function(object, full) {
         var k, result;
+
+        switch (typeof object) {
+            case "object":
+                break;
+            case "string":
+            case "boolean":
+            case "number":
+            case "undefined":
+                return object;
+            case "function":
+            default:
+                throw "Not implemented";
+        }
+
+        if (object === null) {
+            return null;
+        }
+
         if (Array.isArray(object)) {
             result = [];
 
