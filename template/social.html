@@ -5,7 +5,6 @@
     class="mob"
     data-id=""
     data-mobType=""
-    data-initiative=""
     data-reacted
 >
     <span class="initiativeScore"></span>
@@ -87,10 +86,11 @@ window.initiativeContext = {};
         result.mob_type = li.getAttribute("data-mobType");
         result.colour = li.style.color;
         result.character_name = li.querySelector(".mobName").innerHTML;
-        result.initiative = parseInt(li.getAttribute("data-initiative"));
-        if (li.hasAttribute("data-potential")) {
-            result.potential = parseInt(li.getAttribute("data-potential"));
+        result.potential = parseInt(li.getAttribute("data-potential"));
+        if (li.hasAttribute("data-initiative")) {
+            result.initiative = parseInt(li.getAttribute("data-initiative"));
         }
+
         result.order = parseInt(li.getAttribute("data-order"));
         result.speed = {};
 
@@ -134,7 +134,7 @@ window.initiativeContext = {};
             addPlayer(data["player_add"]);
         }
         if (data["player_update"]) {
-            addPlayer(data["player_update"], true);
+            addPlayer(data["player_update"], { isUpdate : true });
         }
         if (data["player_remove"]) {
             removePlayer(data["player_remove"]);
@@ -190,7 +190,6 @@ window.initiativeContext = {};
             // DM will keep players in list unless forced.
             // But should still ignore them when calculating next player.
             if (li.hasAttribute("data-initiative")) {
-                li.setAttribute("data-potential", li.getAttribute("data-initiative"));
                 li.removeAttribute("data-initiative");
             }
         } else {
@@ -211,16 +210,21 @@ window.initiativeContext = {};
     /**
      * Adds a mob to the list, by correct sort order.
      * @param {object} data describing the player
-     * @param {boolean} isUpdate true if updating a player already in the list.
-     * @param {boolean} isTurn true if it's this players turn.
+     * @param {object} flags consiting of
+     ** {boolean} isUpdate true if updating a player already in the list.
+     ** {boolean} isTurn true if it's this players turn.
+     ** {boolean} isInCombat true if the player is located on the map.
      */
-    addPlayer = function(data, isUpdate, isTurn) {
+    addPlayer = function(data, flags) {
         var list, li, otherLi, fragment,
-            inserted, i, extant, init;
+            inserted, i, extant, init, potentialInit;
+        flags = flags || {};
+
+        potentialInit = data.initiative || data.potential;
+
         if (!isNaN(data.player_id)) {
             data.id = data.player_id
         }
-
         // Don't add same player more than once.
         li = _listEl.querySelector("li[data-id='" + data.id + "']");
         if (!li) {
@@ -229,7 +233,11 @@ window.initiativeContext = {};
             fragment.appendChild(document.createElement("span"));
             fragment.firstElementChild.insertAdjacentHTML("beforeend", _template);
             li = fragment.firstElementChild.firstElementChild;
-        } else if (!isUpdate) {
+        } else if (!flags.isUpdate) {
+            // Just update the initiative and get out.
+            if (flags.isInCombat && !li.hasAttribute("data-initiative")) {
+                li.setAttribute("data-initiative", potentialInit);
+            }
             return;
         } else {
             inserted = true;
@@ -256,11 +264,15 @@ window.initiativeContext = {};
         }
 
         // Add mobs in initiative order.
-        if (!isNaN(data.initiative)) {
+        if (!isNaN(potentialInit)) {
             inserted = false;
             li.parentNode.removeChild(li);
-            li.querySelector(".initiativeScore").innerHTML = data.initiative;
-            li.setAttribute("data-initiative", data.initiative);
+            li.querySelector(".initiativeScore").innerHTML = potentialInit;
+            li.setAttribute("data-potential", potentialInit);
+            if (flags.isInCombat) {
+                li.setAttribute("data-initiative", potentialInit);
+            }
+
             if (!data.order) {
                 data.order = _orderIndex;
                 _orderIndex++;
@@ -269,12 +281,12 @@ window.initiativeContext = {};
 
             extant = _listEl.querySelectorAll("li.mob");
             for (i = 0; i < extant.length; i++) {
-                init = parseInt(extant[i].getAttribute("data-initiative"));
-                if (data.initiative > init) {
+                init = parseInt(extant[i].getAttribute("data-potential"));
+                if (potentialInit > init) {
                     _listEl.insertBefore(li, extant[i]);
                     inserted = true;
                     break;
-                } else if (data.initiative === init) {
+                } else if (potentialInit === init) {
                     // If same initiative, use the order property.
                     init = extant[i].getAttribute("data-order");
                     if (data.order < init) {
@@ -290,8 +302,8 @@ window.initiativeContext = {};
         if (!inserted) {
             _listEl.appendChild(li);
         }
-        
-        if (isTurn) {
+
+        if (flags.isTurn) {
             otherLi = _listEl.querySelector(".currentTurn");
             if (otherLi) {
                 otherLi.classList.remove("currentTurn");

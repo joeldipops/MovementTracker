@@ -156,7 +156,11 @@ loadExternalScript("public/combatMap.js");
         window.initiativeContext.clearNpcs();
         for (k in data.mobs) {
             for (i = 0; i < data.mobs[k].length; i++) {
-                initiativeContext.addMob(data.mobs[k][i], true, isEqual(data.mobs[k][i].id, turnMobId));
+                initiativeContext.addMob(data.mobs[k][i], {
+                    isUpdate: true,
+                    isTurn: isEqual(data.mobs[k][i].id, turnMobId),
+                    isInCombat: true
+                });
             }
         }
     };
@@ -631,7 +635,7 @@ loadExternalScript("public/combatMap.js");
         y1 = mob.y;
         pageContext.removeMob(mob);
 
-        initiativeContext.addMob(arguments[0]);
+        initiativeContext.addMob(arguments[0], { isInCombat : true });
 
         x = parseInt(location.getAttribute("data-x"));
         y = parseInt(location.getAttribute("data-y"));
@@ -646,8 +650,9 @@ loadExternalScript("public/combatMap.js");
                 { x : x, y: y }
             );
         }
+
         // If you just moved, or you as the DM just moved an NPC, reclculate the overlay.
-        if (isEqual(mob.id, window.playerId) || (mob.mob_type === "npc" && document.body.hasAttribute("data-isDm"))) {
+        if (document.body.hasAttribute("data-isMyTurn") && (isEqual(mob.id, window.playerId) || (mob.mob_type === "npc" && document.body.hasAttribute("data-isDm")))) {
             renderOverlay(mob);
         }
 
@@ -660,6 +665,7 @@ loadExternalScript("public/combatMap.js");
      */
     onMyTurnStart = function(data) {
         var tab;
+
         document.body.setAttribute("data-isMyTurn", "isMyTurn");
         resetMenu(data);
         // DM has a tab menu that must be shown and hidden when moving through turns
@@ -677,6 +683,7 @@ loadExternalScript("public/combatMap.js");
      */
     onPlayerMove = function(data) {
         var newLocation = pageContext.getCell(data.x, data.y);
+        data = initiativeContext.getMobData(data.id);
         moveMob(data, newLocation, true);
     };
 
@@ -879,14 +886,15 @@ loadExternalScript("public/combatMap.js");
      */
     relocateMob = function(data, event) {
         var mob;
+
+        // Ensure mob appers correctly with initiative.
+        initiativeContext.addMob(data, { isUpdate : true, isInCombat: true });
+
         mob = pageContext.getMobWithId(data.id);
         if (mob) {
             pageContext.removeMob(mob);
             mob = void 0;
-        } else if (data.mob_type === "pc") {
-            // Ensure mob appers correctly with initiative.
-            initiativeContext.addMob(data, true);
-        } else {
+        } else if (data.mob_type !== "pc") {
             // Notify all of new mob's data.
             sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
                 message : { player_update : data }
@@ -1037,7 +1045,6 @@ loadExternalScript("public/combatMap.js");
     onPositionClicked = function(data) {
         pageContext.removeMapEvents();
         if (!data.initiative && data.initiative !== 0) {
-            data.initiative = data.potential;
             initiativeContext.addMob(data);
         }
         pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
@@ -1172,7 +1179,7 @@ loadExternalScript("public/combatMap.js");
             data = {
                 character_name : name,
                 mob_type : "npc",
-                initiative : init,
+                potential : init,
                 size : document.querySelector("[name='npcSize']").value,
                 speed : {},
                 id : (new Date()).valueOf().toString()
