@@ -26,15 +26,17 @@
      */
     getTerrainsJson = function() {
         var terrains, result;
-        terrains = _mapEl.querySelectorAll(".terrain[data-x]:not([data-type='normal'])");
+        terrains = _mapEl.querySelectorAll(".terrain[data-x]:not([data-type='normal']),[data-type='normal'].difficult");
         result = {};
         for (i = 0; i < terrains.length; i++) {
             x = terrains[i].getAttribute("data-x");
             y = terrains[i].getAttribute("data-y");
+            
             result[x + "," + y] = {
                 type : terrains[i].getAttribute("data-type"),
                 x : x,
-                y: y
+                y: y,
+                is_difficult : terrains[i].classList.contains("difficult")
             };
         }
 
@@ -203,7 +205,7 @@
 
                     // Set any abnormal terrain on this cell.
                     if (data.terrains && data.terrains[key]) {
-                        pageContext.setTerrain(x, y, data.terrains[key].type);
+                        pageContext.setTerrain(x, y, data.terrains[key].type, data.terrains[key].is_difficult);
                     } else {
                         button.setAttribute("data-type", "normal");
                     }
@@ -350,11 +352,21 @@
      * @param {number} x co-ordinate of the terrain.
      * @param {number} y co-ordinate of the terrain.
      * @param {string} type type-code of the terrain.
+     * @param {boolean} isDifficult true if cell is difficult terrain.
      */
-    pageContext.setTerrain = function(x, y, type) {
+    pageContext.setTerrain = function(x, y, type, isDifficult) {
         var el = pageContext.getCell(x, y);
         el.setAttribute("data-type", type);
+        el.parentNode.setAttribute("data-type", type);
         el.parentNode.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
+
+        if (isDifficult) {
+            el.classList.add("difficult");
+            el.parentNode.classList.add("difficult");
+        } else {
+            el.classList.remove("difficult");
+            el.parentNode.classList.remove("difficult");
+        }
     };
 
     /**

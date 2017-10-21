@@ -118,7 +118,9 @@ loadExternalScript("public/combatMap.js");
                     <input type="number" id="terrainLength" name="terrainLength" value="1" />
                 </div>
             </div>
+            <input id="isDifficult" type="checkbox" name="isDifficult" /><label for="isDifficult">Difficult</label>
             <ul class="ctrl-radioButtonList" name="terrainTypes"></ul>
+
         </fieldset>
     </div>
 </script>
@@ -360,6 +362,8 @@ loadExternalScript("public/combatMap.js");
     getSpeedPriority = function(terrain) {
         var priority, result, i;
 
+        terrain = terrain.split("+")[0];
+
         priority = _menuEl.querySelector("[name='movementType']:checked");
         priority = priority ? priority.value : null;
         if (!priority) {
@@ -395,7 +399,9 @@ loadExternalScript("public/combatMap.js");
      * @returns {boolean} true if point can be reached.
      */
     attemptMove = function(current, candidate, mob, makeAttempt) {
-        var distance, els, speeds, i, j, k, x, y, value, total, startDistance, speedOrder;
+        var distance, els, speeds, total, startDistance, speedOrder, speedType, modifier, difficult,
+            i, j, k, x, y, value;
+
         els = _menuEl.querySelectorAll("[name='movementType']");
         speeds = {};
         for (i = 0; i < els.length; i++) {
@@ -433,6 +439,8 @@ loadExternalScript("public/combatMap.js");
                 continue;
             }
 
+            difficult = parseFloat(k.split("+")[1], 10) || 0;
+
             speedOrder = getSpeedPriority(k);
             // Use the best speed we have first (eg. swimming for water)
             for (i = 0; i < speedOrder.length; i++) {
@@ -440,28 +448,36 @@ loadExternalScript("public/combatMap.js");
                 if (distance[k] <= 0) {
                     break;
                 }
-                value = (speedOrder[i] || []).split("|");
-                if (!speeds[value[0]]) {
+                value = (speedOrder[i] || []).split("+");
+                speedType = value[0];
+
+                // + 1 for using walk to swim or climb.
+                // + 1 for difficult terrain.
+                modifier = 1;
+                modifier += difficult;
+                modifier += parseFloat(value[1], 10) || 0;
+
+                if (!speeds[speedType]) {
                     continue;
                 }
-                value[1] = value[1] ? parseFloat(value[1], 10) : 1;
-                if ((distance[k] * value[1]) < speeds[value[0]]) {
+
+                if ((distance[k] * modifier) < speeds[speedType]) {
                     // made the distance with speed to spare.
-                    speeds[value[0]] -= distance[k] * value[1];
+                    speeds[speedType] -= distance[k] * modifier;
                     distance[k] = 0;
-                } else if ((distance[k] * value[1]) > speeds[value[0]]) {
+                } else if ((distance[k] * modifier) > speeds[speedType]) {
                     // used up all of this speed trying to make the distance.
-                    distance[k] -= Math.floor(speeds[value[0]] / value[1]);
-                    speeds[value[0]] = 0;
+                    distance[k] -= Math.floor(speeds[speedType] / modifier);
+                    speeds[speedType] = 0;
                 } else {
                     // Used all of this speed, but made the distance.
                     distance[k] = 0;
-                    speeds[value[0]] = 0;
+                    speeds[speedType] = 0;
                 }
 
                 // Adjust all speeds by distance already moved.
                 for (j in speeds) {
-                    if (!speeds.hasOwnProperty(j) || j === value[0]) {
+                    if (!speeds.hasOwnProperty(j) || j === speedType) {
                         continue;
                     }
                     speeds[j] -= (startDistance - distance[k]);
@@ -509,7 +525,10 @@ loadExternalScript("public/combatMap.js");
                 y++
             ) {
                 cell = pageContext.getCell(x1, y);
-                cell = cell.getAttribute("data-type");
+                cell = cell.classList.contains("difficult")
+                    ? cell.getAttribute("data-type") + "+1"
+                    : cell.getAttribute("data-type")
+
                 if (!result[cell]) {
                     result[cell] = 0;
                 }
@@ -546,7 +565,11 @@ loadExternalScript("public/combatMap.js");
             if (!cell) {
                 continue;
             }
-            cell = cell.getAttribute("data-type");
+            cell = cell.classList.contains("difficult")
+                ? cell.getAttribute("data-type") + "+1"
+                : cell.getAttribute("data-type")
+            ;
+
             if (!result[cell]) {
                 result[cell] = 0;
             }
@@ -993,7 +1016,7 @@ loadExternalScript("public/combatMap.js");
      * @param {DOMEvent} event The click event describing where to add the terrain.
      */
     addTerrain = function(event) {
-        var x, y, X, Y, width, height, type,
+        var x, y, X, Y, width, height, type, isDifficult,
             el, maxX, maxY;
 
         x = parseInt(event.currentTarget.getAttribute("data-x"));
@@ -1001,6 +1024,7 @@ loadExternalScript("public/combatMap.js");
         width = parseInt(document.querySelector("[name='terrainWidth']").value);
         height = parseInt(document.querySelector("[name='terrainLength']").value);
         type = document.querySelector("[name='terrainType']:checked").value;
+        isDifficult = document.querySelector("[name='isDifficult']").checked;
 
         mapSize = pageContext.getSize();
         maxX = mapSize.width;
@@ -1008,7 +1032,7 @@ loadExternalScript("public/combatMap.js");
 
         for (X = x; X < (x + width) && X <= maxX; X++) {
             for(Y = y; Y < (y + height) && Y <= maxY; Y++) {
-                pageContext.setTerrain(X, Y, type);
+                pageContext.setTerrain(X, Y, type, isDifficult);
             }
         }
 
@@ -1144,6 +1168,7 @@ loadExternalScript("public/combatMap.js");
             if (!MovementTracker.TERRAIN_TYPES.hasOwnProperty(i)) {
                 continue;
             }
+
             el.insertAdjacentHTML(
                 "beforeend",
                 option.replace(/{type}/g, i)

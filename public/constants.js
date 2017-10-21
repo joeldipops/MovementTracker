@@ -18,20 +18,15 @@
             colour : "rgba(0,0,0,0)",
             speeds: ["walk", "fly"]
         },
-        difficult : {
-            text : "Difficult",
-            colour : "#CCCCCC",
-            speeds: ["walk|2", "fly"]
-        },
         climbable: {
             text: "Climbable",
             colour: "#DDAAAA",
-            speeds: ["climb", "fly", "walk|2"]
+            speeds: ["climb", "fly", "walk+1"]
         },
         swimable: {
             text: "Swimable",
             colour: "#0000FF",
-            speeds: ["swim", "fly", "walk|2"]
+            speeds: ["swim", "fly", "walk+1"]
         },
         impassable: {
             text: "Impassable",
@@ -47,11 +42,11 @@
         },
         swim: {
             text : "SWIM",
-            factor: 0.5
+            factor: 0
         },
         climb: {
             text : "CLIMB",
-            factor: 0.5
+            factor: 0
         },
         fly : {
             text : "FLY",

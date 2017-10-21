@@ -393,6 +393,15 @@ body {
     position: relative;
 }
 
+.ctrl-combatCell.difficult {
+    opacity: 0.5;
+}
+
+.ctrl-combatCell[data-type='normal'].difficult {
+    background-color: #CCCCCC !important;
+    opacity: 1;
+}
+
     .ctrl-combatCell > .terrain {
         height: 100%;
         width: 100%;
