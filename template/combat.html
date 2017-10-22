@@ -133,17 +133,16 @@
 </script>
 <script type="application/javascript">
 function combatScript(main, dmControls) {
-    if (document.body.hasAttribute("data-isDM")) {
+    if (dmControls && dmControls.onSetupStart) {
         dmControls.onSetupStart();
     } else {
-        /// hrmmmmm...
-        dmControls.resetEvents();
+        onEvent(window.socket, "message", main.onMessageReceived);
         main.onPlayStart();
     }
 };
 
 runAsync([
     loadExternalScript("main", "public/combat.js"),
-    loadExternalScript("dmControls", "public/dmControls.js")
+    document.body.hasAttribute("data-isDM") ? loadExternalScript("dmControls", "public/dmControls.js") : Promise.resolve()
 ], true).then(combatScript);
 </script>
