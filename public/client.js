@@ -1,13 +1,18 @@
 var mainEl,
     onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
-    showAlert, sendHttpRequest, replaceBody, loadExternalScript,
-    pageContext;
+    showAlert, sendHttpRequest, replaceBody, loadExternalScript, registerInterface;
 
-pageContext = {};
+pageContext ={};
 
-var a = function() {
+if (!window.MovementTracker) {
+    window.MovementTracker = {};
+}
+window.MovementTracker.page = {};
+
+var setup = function() {
     var _pageEvents, _pendingPromises, _pendingTimeouts,
-        evaluateScripts, toQueryString, socketControl, nativeParseInt, nativeSetTimeout;
+        evaluateScripts, toQueryString, socketControl, nativeParseInt, nativeSetTimeout, getCurrentScriptEl;
+
     _pageEvents = {};
     _pendingCancelFlags = [];
     _pendingTimeouts = [];
@@ -235,14 +240,16 @@ var a = function() {
     
     /**
      * Resolves the promise when all the the async work is resolved.
-     * @param {Array of Promise} promises
+     * @param {Array<Promise>} promises
+     * @param {boolean} doApply true if you want the arguments to be applied to the callback or stay as an array.
      * @returns {Promise} callback argument is an indexed list of the results that matches the order passed in.
      */
-    runAsync = function(promises) {
-        return newPromise(function(resolve, reject) {
+    runAsync = function(promises, doApply) {
+        var result, applier;
+        result = newPromise(function(resolve, reject) {
             var i, results, resolved;
             resolved = 0;
-            results = {};
+            results = [];
 
             // If no promises, resolve immediately.
             if (!promises.length) {
@@ -255,17 +262,38 @@ var a = function() {
                 promises[i].then(function(index, result) {
                     resolved++;
                     results[index] = result;
-                    if (resolved == promises.length) {
+                    if (resolved === promises.length) {
                         resolve(results);
                     }
                 }.bind({},i))
                 // If any fail, fail the whole thing.
                 .catch(function(index, result) {
                     results[index] = result;
-                    reject(results);
+                    if (doApply) {
+                        reject(results);
+                    } else {
+                        reject.apply(null, results);
+                    }
                 }.bind({},i));
             }
         });
+
+        // If this flag is passed, we should apply the results to the callback rather than dump 
+        // them in as an array.  Means returning an object that looks & acts like a promise.
+        if (doApply) {
+            applier = function(fn, r) { return fn.apply(null, r); };
+            return {
+                then: function(fn, xfn) {
+                    return result.then(applier.bind(null, fn))
+                    .catch(applier.bind(null, xfn));
+                },
+                catch: function(fn) {
+                    return result.catch(applier.bind(null, fn));
+                }
+            }
+        } else {
+            return result;
+        }
     };
 
     /**
@@ -399,14 +427,75 @@ var a = function() {
 
     /**
      * Dynamically loads a script at the given url.
+     * @param {string} name To reference the interface by.
      * @param {string} src The url of the script.
      */
-    loadExternalScript = function(src) {
+    loadExternalScript = function(name, src) {
         var script;
         script = document.createElement("script");
         script.setAttribute("type", "application/javascript");
+        script.setAttribute("data-name", name);
         script.setAttribute("src", src);
         mainEl.insertBefore(script, mainEl.firstChild);
+
+        return new Promise(function(resolve, reject) {
+            var timeout = (new Date()).valueOf() + window.MovementTracker.SCRIPT_LOAD_TIMEOUT;
+            // Wait for the script to be registered then resolve.
+            wait(function() {
+                if (window.MovementTracker.page[name]) {
+                    resolve(window.MovementTracker.page[name]);
+                    return true;
+                }
+                if (timeout > (new Date()).valueOf()) {
+                    reject();
+                    return true;
+                }
+                return false;
+            })
+        });
+    };
+    
+    /**
+     * Puts a script's public interface on the global object so it can be accessed.
+     */
+    registerInterface = function(interface) {
+        var el = getCurrentScriptEl();
+        if (!el) {
+            throw new Error("Not called from context of executing script tag.");
+        }
+        window.MovementTracker.page[el.getAttribute("data-name")] = interface;
+    };
+
+    /**
+     * Gets the script tag that introduced the currently executing script.
+     * Taken from https://gist.github.com/cphoover/6228063
+     */
+    getCurrentScriptEl = function() {
+        var stack, src, token;
+        if (document.currentScript) {
+            return document.currentScript;
+        }
+
+        // polyfill: get the source name from stack trace.
+        try {
+            throw new Error();
+        } catch (error) {
+            src = error.stack;
+        }
+
+        if (!src) {
+            return null;
+        }
+
+        token = src.indexOf(' at ') !== -1 ? ' at ' : '@';
+        while (src.indexOf(token) !== -1) {
+            src = src.substring(src.indexOf(token) + token.length);
+        }
+        src = src.replace("://", "");
+        src = src.replace(/^.*?\//, "");
+        src = src.replace(/:.*/, "");
+
+        return document.querySelector("[src='" + src + "']");
     };
 
     // Sets up a websocket connection with the server.

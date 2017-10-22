@@ -2,9 +2,6 @@
     <table id="map" class="ctrl-combatMap">
     </table>
 </article>
-<script type="application/javascript">
-loadExternalScript("public/combatMap.js");
-</script>
 <script id="template-combatCell" type="text/html">
 <td class="ctrl-combatCell">
     <button class="terrain">&nbsp;</button>
@@ -135,7 +132,7 @@ loadExternalScript("public/combatMap.js");
     <h1>{message}</h1>
 </script>
 <script type="application/javascript">
-(function combatScript() {
+function combatScript(combatMap, dmMenu) {
     var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
         onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
         onClearClicked, onStartClicked, onResetClicked, onDashChange, onTerrainClick, onPlayerMove,
@@ -154,7 +151,7 @@ loadExternalScript("public/combatMap.js");
      */
     updateMap = function(data, turnMobId) {
         var k, i;
-        pageContext.renderMap(data, _template);
+        combatMap.renderMap(data, _template);
         window.initiativeContext.clearNpcs();
         for (k in data.mobs) {
             for (i = 0; i < data.mobs[k].length; i++) {
@@ -193,13 +190,13 @@ loadExternalScript("public/combatMap.js");
      * @param {object} mob The mob.
      */
     renderOverlay = function(mob) {
-        pageContext.removeClass("reachable");
-        pageContext.removeClass("unreachable");
+        combatMap.removeClass("reachable");
+        combatMap.removeClass("unreachable");
 
-        pageContext.forEach(function(cell) {
+        combatMap.forEach(function(cell) {
             var loc, current;
-            loc = pageContext.getMobWithId(mob.id);
-            current = pageContext.getCell(loc.x, loc.y);
+            loc = combatMap.getMobWithId(mob.id);
+            current = combatMap.getCell(loc.x, loc.y);
 
             if (attemptMove(current, cell, mob)) {
                 // Set timeout allows for a smoother ux
@@ -214,8 +211,8 @@ loadExternalScript("public/combatMap.js");
      * Sets up the map to allow movement during a turn.
      */
     onMoveSelected = function(data) {
-        pageContext.removeMapEvents();
-        pageContext.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data), "turn");
+        combatMap.removeMapEvents();
+        combatMap.onMapEvent("td > .terrain", "click", onTerrainClick.bind({}, data), "turn");
         renderOverlay(data);
     };
 
@@ -296,7 +293,7 @@ loadExternalScript("public/combatMap.js");
     triggerNextTurn = function() {
         var id;
         if (id = initiativeContext.getNext()) {
-            pageContext.removeMapEvents();
+            combatMap.removeMapEvents();
             return sendHttpRequest("session/" + window.sessionId + "/turn/" + id, "PUT");
         } else {
             return newPromise();
@@ -325,10 +322,10 @@ loadExternalScript("public/combatMap.js");
     onTurnStart = function(data) {
         var message, el;
         offEvents("turn");
-        pageContext.removeMapEvents();
+        combatMap.removeMapEvents();
 
-        pageContext.removeClass("reachable");
-        pageContext.removeClass("unreachable");
+        combatMap.removeClass("reachable");
+        combatMap.removeClass("unreachable");
 
         message = "<h1>" + data.character_name + "'s Turn</h1>";
         if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
@@ -349,7 +346,7 @@ loadExternalScript("public/combatMap.js");
                 _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 3);
             }
         }
-        window.pageContext.setTurn(data.id);
+        combatMap.setTurn(data.id);
         showAlert(message, 1000);
     };
     window.initiativeContext.onListEvent("turn_start", onTurnStart);
@@ -524,7 +521,7 @@ loadExternalScript("public/combatMap.js");
                 y <= ((y1 < y2) ? y2 : y1);
                 y++
             ) {
-                cell = pageContext.getCell(x1, y);
+                cell = combatMap.getCell(x1, y);
                 cell = cell.classList.contains("difficult")
                     ? cell.getAttribute("data-type") + "+1"
                     : cell.getAttribute("data-type")
@@ -561,7 +558,7 @@ loadExternalScript("public/combatMap.js");
             y = Math.floor((m * i + c) / factor);
             x = Math.floor(i / factor);
 
-            cell = pageContext.getCell(x, y);
+            cell = combatMap.getCell(x, y);
             if (!cell) {
                 continue;
             }
@@ -596,10 +593,10 @@ loadExternalScript("public/combatMap.js");
     onTerrainMouseOver = function(mob, event) {
         var loc, current, speedEl;
 
-        pageContext.removeClass("reachable");
-        pageContext.removeClass("unreachable");
-        loc = pageContext.getMobWithId(mob.id);
-        current = pageContext.getCell(loc.x, loc.y);
+        combatMap.removeClass("reachable");
+        combatMap.removeClass("unreachable");
+        loc = combatMap.getMobWithId(mob.id);
+        current = combatMap.getCell(loc.x, loc.y);
 
         if (attemptMove(current, event.currentTarget, mob)) {
             event.currentTarget.classList.add("reachable");
@@ -618,11 +615,11 @@ loadExternalScript("public/combatMap.js");
         var distance, loc;
         if (!event.currentTarget.classList.contains("selected")) {
             // Update which tile is selected.
-            pageContext.removeClass("selected");
+            combatMap.removeClass("selected");
             event.currentTarget.classList.add("selected");
         } else {
-            loc = pageContext.getMobWithId(mob.id);
-            attemptMove(pageContext.getCell(loc.x, loc.y), event.currentTarget, mob, true);
+            loc = combatMap.getMobWithId(mob.id);
+            attemptMove(combatMap.getCell(loc.x, loc.y), event.currentTarget, mob, true);
         }
         event.preventDefault();
     };
@@ -653,17 +650,17 @@ loadExternalScript("public/combatMap.js");
      */
     moveMob = function(mob, location, silent) {
         var x1, y1, x, y, distance;
-        mob = pageContext.getMobWithId(mob.id) || mob;
+        mob = combatMap.getMobWithId(mob.id) || mob;
         x1 = mob.x;
         y1 = mob.y;
-        pageContext.removeMob(mob);
+        combatMap.removeMob(mob);
 
         initiativeContext.addMob(arguments[0], { isInCombat : true });
 
         x = parseInt(location.getAttribute("data-x"));
         y = parseInt(location.getAttribute("data-y"));
 
-        pageContext.setMob(x, y, mob);
+        combatMap.setMob(x, y, mob);
 
         // Notify all of the move.
         if (!silent) {
@@ -705,7 +702,7 @@ loadExternalScript("public/combatMap.js");
      * Updates the map when a player_move event is received.
      */
     onPlayerMove = function(data) {
-        var newLocation = pageContext.getCell(data.x, data.y);
+        var newLocation = combatMap.getCell(data.x, data.y);
         data = initiativeContext.getMobData(data.id);
         moveMob(data, newLocation, true);
     };
@@ -725,10 +722,10 @@ loadExternalScript("public/combatMap.js");
         if (data["terrain_update"]) {
             fn = function(data) {
                 var x, y, size;
-                size = pageContext.getSize();
+                size = combatMap.getSize();
                 for (x = data.left; x < (data.left + data.width) && x <= size.width; x++) {
                     for(y = data.top; y < (data.top + data.height) && y <= size.height; y++) {
-                        pageContext.setTerrain(x, y, data.type);
+                        combatMap.setTerrain(x, y, data.type);
                     }
                 }
             };
@@ -738,7 +735,7 @@ loadExternalScript("public/combatMap.js");
             if (data["player_remove"].from_combat) {
                 toggleMob(initiativeContext.getMobData(data["player_remove"].id), true);
             } else {
-                pageContext.removeMob(data["player_remove"]);
+                combatMap.removeMob(data["player_remove"]);
             }
         }
         if (data["player_react"]) {
@@ -766,15 +763,10 @@ loadExternalScript("public/combatMap.js");
             el = el.querySelector("[for='turnControlsTab']")
             el.classList.add("hidden");
         }
-        wait(function() {
-            if (!pageContext.renderMap) {
-                return false;
-            }
-            renderMenu();
-            resetMap();
-            onEvent(window.socket, "message", onMessageReceived);
-            return true;
-        });
+
+        renderMenu();
+        resetMap();
+        onEvent(window.socket, "message", onMessageReceived);
     };
 
     /**
@@ -789,35 +781,27 @@ loadExternalScript("public/combatMap.js");
             sendHttpRequest("session/" + window.sessionId + "/turn", "GET")
         ])
         .then(function(response) {
-            var el;
-            wait(function() {
-                var data, turnId;
-                if (pageContext.renderMap) {
-                    data = {
-                        map :JSON.parse(response[0].responseText || null),
-                        turn : JSON.parse(response[1].responseText || null)
-                    };
-                    if (data.map.width) {
-                        updateMap(
-                            data.map,
-                            data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
-                        );
-                    }
-                    renderMenu();
-                    if (el = _menuEl.querySelector("#dmControlTabs")) {
-                        el.setAttribute("data-tabs", 4);
-                        el = el.querySelector("[for='turnControlsTab']")
-                        el.classList.remove("hidden");
-                    }
-                    if (document.body.hasAttribute("data-isDM")) {
-                        onCombatStart();
-                    }
-                    initiativeContext.onListEvent("react", onReactClicked);
-                    return true;
-                }
-                return false;
-            });
-            return true;
+            var el, data, turnId;
+            data = {
+                map :JSON.parse(response[0].responseText || null),
+                turn : JSON.parse(response[1].responseText || null)
+            };
+            if (data.map.width) {
+                updateMap(
+                    data.map,
+                    data.turn && data.turn.turn_start && data.turn.turn_start.id.toString()
+                );
+            }
+            renderMenu();
+            if (el = _menuEl.querySelector("#dmControlTabs")) {
+                el.setAttribute("data-tabs", 4);
+                el = el.querySelector("[for='turnControlsTab']")
+                el.classList.remove("hidden");
+            }
+            if (document.body.hasAttribute("data-isDM")) {
+                onCombatStart();
+            }
+            initiativeContext.onListEvent("react", onReactClicked);
         })
         .catch(function() {
             debugger;
@@ -836,19 +820,12 @@ loadExternalScript("public/combatMap.js");
         onEvent(window.socket, "message", onMessageReceived);
     };
 
-    if (document.body.hasAttribute("data-isDM")) {
-        onSetupStart();
-    } else {
-        resetEvents();
-        onPlayStart();
-    }
-
     /**
      * Resets the map to a blank slate.
      */
     onClearClicked = function(isSilent) {
         var map;
-        pageContext.removeMapEvents();
+        combatMap.removeMapEvents();
         map = document.getElementById("map");
         map.removeAttribute("data-width");
         map.removeAttribute("data-height");
@@ -866,7 +843,7 @@ loadExternalScript("public/combatMap.js");
      */
     onStartClicked = function() {
         var requestBody;
-        requestBody = pageContext.mapToJSON();
+        requestBody = combatMap.mapToJSON();
         resetEvents();
         sendHttpRequest("session/" + window.sessionId + "/map", "PUT", requestBody)
         .then(function() {
@@ -913,9 +890,9 @@ loadExternalScript("public/combatMap.js");
         // Ensure mob appers correctly with initiative.
         initiativeContext.addMob(data, { isUpdate : true, isInCombat: true });
 
-        mob = pageContext.getMobWithId(data.id);
+        mob = combatMap.getMobWithId(data.id);
         if (mob) {
-            pageContext.removeMob(mob);
+            combatMap.removeMob(mob);
             mob = void 0;
         } else if (data.mob_type !== "pc") {
             // Notify all of new mob's data.
@@ -926,7 +903,7 @@ loadExternalScript("public/combatMap.js");
         if (!addMob(clone(data), event) && mob) {
             // Weren't able to move because of terrain etc restrictions,
             // so put back where it was.
-            pageContext.setMob(mob.x, mob.y, mob);
+            combatMap.setMob(mob.x, mob.y, mob);
         }
     };
 
@@ -939,7 +916,7 @@ loadExternalScript("public/combatMap.js");
      */
     isTileFreeForMob = function(x, y, mob) {
         var extant, size;
-        extant = pageContext.getMob(x, y);
+        extant = combatMap.getMob(x, y);
         size = MovementTracker.MOB_SIZES[mob.size];
 
         for (i = 0; i < (extant ? extant.length : 0); i++) {
@@ -984,7 +961,7 @@ loadExternalScript("public/combatMap.js");
 
         size = MovementTracker.MOB_SIZES[data.size];
 
-        mapSize = pageContext.getSize();
+        mapSize = combatMap.getSize();
         maxX = mapSize.width;
         maxY = mapSize.height;
 
@@ -992,7 +969,7 @@ loadExternalScript("public/combatMap.js");
             for (j = y; j < y + size.tiles && j <= maxY; j++) {
                 // Needs A LOT of design work on what to do with larger creatures & multiple 
                 // creatures on a tile...
-                pageContext.setMob(i, j, data);
+                combatMap.setMob(i, j, data);
             }
         }
 
@@ -1026,13 +1003,13 @@ loadExternalScript("public/combatMap.js");
         type = document.querySelector("[name='terrainType']:checked").value;
         isDifficult = document.querySelector("[name='isDifficult']").checked;
 
-        mapSize = pageContext.getSize();
+        mapSize = combatMap.getSize();
         maxX = mapSize.width;
         maxY = mapSize.height;
 
         for (X = x; X < (x + width) && X <= maxX; X++) {
             for(Y = y; Y < (y + height) && Y <= maxY; Y++) {
-                pageContext.setTerrain(X, Y, type, isDifficult);
+                combatMap.setTerrain(X, Y, type, isDifficult);
             }
         }
 
@@ -1057,7 +1034,7 @@ loadExternalScript("public/combatMap.js");
         width = parseInt(document.querySelector("[name='mapWidth']").value);
         height = parseInt(document.querySelector("[name='mapHeight']").value);
         onClearClicked(true);
-        pageContext.renderMap({
+        combatMap.renderMap({
             width: width,
             height: height
         }, _template);
@@ -1067,11 +1044,11 @@ loadExternalScript("public/combatMap.js");
      * Moves the in-context mob to the next clicked location.
      */
     onPositionClicked = function(data) {
-        pageContext.removeMapEvents();
+        combatMap.removeMapEvents();
         if (!data.initiative && data.initiative !== 0) {
             initiativeContext.addMob(data);
         }
-        pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
+        combatMap.onMapEvent("td > button", "click", relocateMob.bind({}, data));
     };
 
 
@@ -1108,8 +1085,8 @@ loadExternalScript("public/combatMap.js");
     toggleMob = function(data, silent) {
         var inCombat = document.body.getAttribute("data-state") === "combat";
         if (data.mob_type == "npc" || !inCombat) {
-            pageContext.removeMapEvents();
-            pageContext.removeMob(data);
+            combatMap.removeMapEvents();
+            combatMap.removeMob(data);
         }
 
         if (data.mob_type === "pc") {
@@ -1119,7 +1096,7 @@ loadExternalScript("public/combatMap.js");
             }
 
             if (inCombat) {
-                pageContext.addCondition(data.id, MovementTracker.CONDITIONS.down);
+                combatMap.addCondition(data.id, MovementTracker.CONDITIONS.down);
             }
         }
 
@@ -1222,9 +1199,9 @@ loadExternalScript("public/combatMap.js");
 
             initiativeContext.addMob(data);
 
-            pageContext.removeMapEvents();
+            combatMap.removeMapEvents();
             // the data that we bind the the map event
-            pageContext.onMapEvent("td > button", "click", relocateMob.bind({}, data));
+            combatMap.onMapEvent("td > button", "click", relocateMob.bind({}, data));
         });
 
         // When position/location button is clicked for a mob, we can select a cell.
@@ -1238,8 +1215,8 @@ loadExternalScript("public/combatMap.js");
 
         // When terrain type is selected, we can add a terrain to a cell.
         onEvent("input[name='terrainType']", "change", function() {
-            pageContext.removeMapEvents();
-            pageContext.onMapEvent("td > button", "click", addTerrain);
+            combatMap.removeMapEvents();
+            combatMap.onMapEvent("td > button", "click", addTerrain);
         });
 
         onEvent("[name='mapWidth']", "change", onMapSizeChange);
@@ -1269,20 +1246,32 @@ loadExternalScript("public/combatMap.js");
         var width, height, turn;
         width = parseInt(document.querySelector("[name='mapWidth']").value);
         height = parseInt(document.querySelector("[name='mapHeight']").value);
-        pageContext.resizeMap({
+        combatMap.resizeMap({
             width: width,
             height: height
         }, _template);
 
         turn = initiativeContext.getCurrent();
         return sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
-            message : { map_update : pageContext.mapToJSON() }
+            message : { map_update : combatMap.mapToJSON() }
         })
         .then(function() {
             // Ensure that current players turn continues.
             setTurn(turn);
         });
     };
-    
-})();
+
+    if (document.body.hasAttribute("data-isDM")) {
+        onSetupStart();
+    } else {
+        resetEvents();
+        onPlayStart();
+    }
+};
+
+runAsync([
+    loadExternalScript("map", "public/combatMap.js"),
+    loadExternalScript("dmMenu", "public/dmControls.js")
+], true)
+.then(combatScript);
 </script>

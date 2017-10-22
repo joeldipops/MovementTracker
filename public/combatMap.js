@@ -1,6 +1,8 @@
 (function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex,
-        isSameMob, toggleConditions, getTerrainsJson, getMobsJson;
+        isSameMob, toggleConditions, getTerrainsJson, getMobsJson, public;
+
+    public = {};
 
     _mapEl = document.getElementById("map");
     _mapEvents = [];
@@ -58,7 +60,7 @@
                 result[key] = [];
             }
 
-            result[key].push(pageContext.getMobWithId(k));
+            result[key].push(public.getMobWithId(k));
         }
         return result;
     };
@@ -110,7 +112,7 @@
     /**
      * Renders the map, but moves any mobs and deletes any terrains that no longer fit
      */
-    pageContext.resizeMap = function(data, template) {
+    public.resizeMap = function(data, template) {
         var k, oldHeight, oldWidth, mob, mobsData, offset, isOffMap, key;
 
         if (!(isNatural(data.width)) && isNatural(data.height)) {
@@ -129,7 +131,7 @@
                     continue;
                 }
 
-                mob = pageContext.getMobWithId(k);
+                mob = public.getMobWithId(k);
                 offset = MovementTracker.MOB_SIZES[mob.size] ? MovementTracker.MOB_SIZES[mob.size].tiles - 1 : 0;
 
                 if (mob.x + offset > data.width) {
@@ -153,7 +155,7 @@
         data.mobs = mobsData;
         data.terrains = getTerrainsJson();
 
-        return pageContext.renderMap(data, template);
+        return public.renderMap(data, template);
     };
 
     /**
@@ -161,7 +163,7 @@
      * @param {object} data contains the width and height of the map.
      * @param {string} template a html template.
      */
-    pageContext.renderMap = function(data, template) {
+    public.renderMap = function(data, template) {
         var x, y, key, i,
             newTr, newTd, button;
 
@@ -205,7 +207,7 @@
 
                     // Set any abnormal terrain on this cell.
                     if (data.terrains && data.terrains[key]) {
-                        pageContext.setTerrain(x, y, data.terrains[key].type, data.terrains[key].is_difficult);
+                        public.setTerrain(x, y, data.terrains[key].type, data.terrains[key].is_difficult);
                     } else {
                         button.setAttribute("data-type", "normal");
                     }
@@ -213,7 +215,7 @@
                     // Place any mobs on this cell.
                     if (data.mobs && data.mobs[key]) {
                         for (i = 0; i < data.mobs[key].length; i++) {
-                            pageContext.setMob(x, y, data.mobs[key][i]);
+                            public.setMob(x, y, data.mobs[key][i]);
                         }
                     }
                 }
@@ -227,7 +229,7 @@
      * @param {number} y vertical co-ordinate.
      * @returns {HTMLElement} the tr.
      */
-    pageContext.getCell = function(x, y) {
+    public.getCell = function(x, y) {
         return _mapEl.querySelector("[data-x='{x}'][data-y='{y}']".replace("{x}", x).replace("{y}", y));
     };
 
@@ -235,7 +237,7 @@
      * Highlights a mob on their turn.
      * @param {string} id of the mob.
      */
-    pageContext.setTurn = function(id) {
+    public.setTurn = function(id) {
         var hasTurn;
         // End the previous turn.
         if (hasTurn = _mapEl.querySelector(".hasTurn")) {
@@ -253,7 +255,7 @@
      * @param {function} handler event handler function.
      * @param {string} namespace Allows events to be unbound as a group.
      */
-    pageContext.onMapEvent = function(selector, event, handler, namespace) {
+    public.onMapEvent = function(selector, event, handler, namespace) {
         var target, i;
         target = _mapEl.querySelectorAll(selector);
         if (!target || !target.length) {
@@ -270,7 +272,7 @@
     /**
      * Removes all events bound with onMapEvent.
      */
-    pageContext.removeMapEvents = function() {
+    public.removeMapEvents = function() {
         var i;
         for(i = 0; i < _mapEvents.length; i++) {
             _mapEvents[i]();
@@ -284,7 +286,7 @@
      * @param {number} y co-ordinate of the cell.
      * @returns {object} The mob, if it exists.
      */
-    pageContext.getMob = function(x, y) {
+    public.getMob = function(x, y) {
         if (_mobs[x]) {
             return _mobs[x][y] || [];
         }
@@ -296,14 +298,14 @@
      * @param {number} id of the mob.
      * @returns {object} The mob.
      */
-    pageContext.getMobWithId = function(id) {
+    public.getMobWithId = function(id) {
         var i, array;
 
         if (!_mobIndex[id]) {
             return null;
         }
 
-        array = pageContext.getMob(_mobIndex[id].x, _mobIndex[id].y);
+        array = public.getMob(_mobIndex[id].x, _mobIndex[id].y);
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], { id : id})) {
                 return array[i];
@@ -317,7 +319,7 @@
      * @param {number} y co-ordinate of the cell.
      * @param {object} data describing the mob.
      */
-    pageContext.setMob = function(x, y, data) {
+    public.setMob = function(x, y, data) {
         var el;
         if (!data || !data.id) {
             return;
@@ -343,7 +345,7 @@
         el.setAttribute("title", data.character_name);
         el.innerHTML = (data.character_name || "?")[0];
         el.style.backgroundColor = data.colour || "#EEEEEE";
-        container = pageContext.getCell(x, y);
+        container = public.getCell(x, y);
         container.parentNode.appendChild(el);
     };
 
@@ -354,8 +356,8 @@
      * @param {string} type type-code of the terrain.
      * @param {boolean} isDifficult true if cell is difficult terrain.
      */
-    pageContext.setTerrain = function(x, y, type, isDifficult) {
-        var el = pageContext.getCell(x, y);
+    public.setTerrain = function(x, y, type, isDifficult) {
+        var el = public.getCell(x, y);
         el.setAttribute("data-type", type);
         el.parentNode.setAttribute("data-type", type);
         el.parentNode.style.backgroundColor = MovementTracker.TERRAIN_TYPES[type].colour;
@@ -374,7 +376,7 @@
      * @param {string} id Identifies the mob.
      * @param {string|array of string} conditions The conditions the mob should have.
      */
-    pageContext.addCondition = function(id, conditions) {
+    public.addCondition = function(id, conditions) {
         toggleConditions(id, conditions, true);
     };
 
@@ -383,26 +385,26 @@
      * @param {string} id Identifies the mob.
      * @param {string|array of string} conditions The conditions the mob should not have.
      */
-    pageContext.removeCondition = function(id, conditions) {
+    public.removeCondition = function(id, conditions) {
         toggleConditions(id, conditions, false);
     };
 
     /**
      * Removes a mob from the map
      */
-    pageContext.removeMob = function(data) {
+    public.removeMob = function(data) {
         var cell, mobEl, array, i;
         if (!data || !data.id) {
             return;
         }
         if (!(data.x && data.y)) {
-            data = pageContext.getMobWithId(data.id);
+            data = public.getMobWithId(data.id);
         }
         if (!data || !(data.x && data.y)) {
             return;
         }
         delete _mobIndex[data.id];
-        array = pageContext.getMob(data.x, data.y);
+        array = public.getMob(data.x, data.y);
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], data)) {
                 break;
@@ -410,7 +412,7 @@
         }
         array.splice(i, 1);
 
-        cell = pageContext.getCell(data.x, data.y);
+        cell = public.getCell(data.x, data.y);
         mobEl = cell.parentElement.querySelector(".mob[data-id='" + data.id + "']");
         if (mobEl) {
             mobEl.parentNode.removeChild(mobEl);
@@ -421,7 +423,7 @@
      * Ensures no element on the map has the given class.
      * @param {string} name of class to remove.
      */
-    pageContext.removeClass = function(name) {
+    public.removeClass = function(name) {
         var i, list;
         list = [];
         list.push.apply(list, _mapEl.getElementsByClassName(name));
@@ -434,7 +436,7 @@
      * Gets the width and height of the map.
      * @returns {object} with width and height properties.
      */
-    pageContext.getSize = function() {
+    public.getSize = function() {
         return {
             height: parseInt(_mapEl.getAttribute("data-height")),
             width: parseInt(_mapEl.getAttribute("data-width"))
@@ -445,7 +447,7 @@
      * Converts map to a transmittable object.
      * @returns {object} The map as a json object.
      */
-    pageContext.mapToJSON = function() {
+    public.mapToJSON = function() {
         var result, k, i, x, y, key,
             width, height, terrains, mob;
         width = parseInt(_mapEl.getAttribute("data-width"));
@@ -468,12 +470,12 @@
      * Calls a function on every cell in the map.
      * can be run asynchronously for slower operations.
      */
-    pageContext.forEach = function(fn, isAsync) {
+    public.forEach = function(fn, isAsync) {
         var x, y, cell, size;
-        size = pageContext.getSize();
+        size = public.getSize();
         for (x = 1; x <= size.width; x++) {
             for (y = 1; y <= size.height; y++) {
-                cell = pageContext.getCell(x, y);
+                cell = public.getCell(x, y);
                 if (isAsync) {
                     setTimeout(fn.bind({}, cell), 0)
                 } else {
@@ -484,4 +486,5 @@
         }
     };
 
+    registerInterface(public);
 })();
