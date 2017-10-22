@@ -61,7 +61,7 @@
     <button class="ctrl-thickButton" name="start" data-player_type="spectator">GO</button>
 </fieldset>
 <script type="application/javascript">
-(function indexScript() {
+function indexScript(mobList) {
     var onClickStart, onMessageReceived, onChangeInput, hideDmButton, renderMovement;
 
     document.body.setAttribute("data-state", "lobby");
@@ -164,7 +164,7 @@
         if (window.sessionId) {
             result = runAsync([
                 sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body),
-                initiativeContext.refreshList()
+                mobList.refreshList()
             ]);
         } else {
             result = sendHttpRequest("session", "POST", {})
@@ -173,7 +173,7 @@
                 window.sessionId = data.session_id;
                 return runAsync([
                     sendHttpRequest("session/" + window.sessionId + "/player", "PUT", body),
-                    initiativeContext.refreshList()
+                    mobList.refreshList()
                 ]);
             });
         }
@@ -225,5 +225,12 @@
         }
         return false;
     });
-})();
+};
+wait (function() {
+    if (window.coreReady) {
+        loadExternalScript("mobList", "public/mobList.js").then(indexScript);
+        return true;
+    }
+    return false;
+});
 </script>

@@ -226,12 +226,12 @@ var setup = function() {
             innerPromise
             .then(function() {
                 if (!cancelFlag.value) {
-                    resolve.apply(this, arguments);
+                    resolve.apply(null, arguments);
                 }
             })
             .catch(function() {
                 if (!cancelFlag.value) {
-                    reject.apply(this, arguments);
+                    reject.apply(null, arguments);
                 }
             });
         });
@@ -431,14 +431,14 @@ var setup = function() {
      * @param {string} src The url of the script.
      */
     loadExternalScript = function(name, src) {
-        var script;
-        script = document.createElement("script");
-        script.setAttribute("type", "application/javascript");
-        script.setAttribute("data-name", name);
-        script.setAttribute("src", src);
-        mainEl.insertBefore(script, mainEl.firstChild);
+        var script, result;
 
-        return new Promise(function(resolve, reject) {
+        // If already exists, resolve right away.
+        if (window.MovementTracker.page[name]) {
+            return newPromise(function(resolve) { return resolve(window.MovementTracker.page[name]); });
+        }
+
+        result = newPromise(function(resolve, reject) {
             var timeout = (new Date()).valueOf() + window.MovementTracker.SCRIPT_LOAD_TIMEOUT;
             // Wait for the script to be registered then resolve.
             wait(function() {
@@ -446,24 +446,51 @@ var setup = function() {
                     resolve(window.MovementTracker.page[name]);
                     return true;
                 }
-                if (timeout > (new Date()).valueOf()) {
+                if (timeout < (new Date()).valueOf()) {
                     reject();
                     return true;
                 }
                 return false;
-            })
+            });
         });
+
+        // Request is in progress, so just wait for it.
+        if (window.MovementTracker.page.hasOwnProperty(name)) {
+            return result;
+        }
+
+        // Create the key so we know a request is in progress.
+        window.MovementTracker.page[name] = null;
+
+        // Go and load the script.
+        script = document.createElement("script");
+        script.setAttribute("type", "application/javascript");
+        script.setAttribute("data-name", name);
+        script.setAttribute("src", src);
+        mainEl.insertBefore(script, mainEl.firstChild);
+
+        return result;
     };
     
     /**
      * Puts a script's public interface on the global object so it can be accessed.
+     * @param {Promise|object} 
      */
     registerInterface = function(interface) {
         var el = getCurrentScriptEl();
         if (!el) {
             throw new Error("Not called from context of executing script tag.");
         }
-        window.MovementTracker.page[el.getAttribute("data-name")] = interface;
+
+        interface = interface();
+
+        if (interface.then) {
+            interface.then(function(interface) {
+                window.MovementTracker.page[el.getAttribute("data-name")] = interface;
+            });
+        } else {
+            window.MovementTracker.page[el.getAttribute("data-name")] = interface;
+        }
     };
 
     /**
@@ -530,6 +557,11 @@ var setup = function() {
     }(window.location.origin.replace(/https?/, "ws").replace(/\/$/, ""));
 
     wait(function() {
-        return mainEl = document.getElementById("main");
+        mainEl = document.getElementById("main");
+        if (mainEl) {
+            window.coreReady = true;
+            return true;
+        }
+        return false;
     });
 }();

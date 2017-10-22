@@ -1,4 +1,4 @@
-(function combatMapScript() {
+registerInterface(function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex,
         isSameMob, toggleConditions, getTerrainsJson, getMobsJson, public;
 
@@ -485,6 +485,6 @@
             }
         }
     };
-
-    registerInterface(public);
-})();
+    
+    return public;
+});
