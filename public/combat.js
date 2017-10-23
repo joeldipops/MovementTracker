@@ -52,6 +52,10 @@ registerInterface(function() {
         * @param {object} mob The mob.
         */
         renderOverlay = function(mob) {
+            if (!mob) {
+                mob = combatMap.getTurn();
+            }
+
             combatMap.removeClass("reachable");
             combatMap.removeClass("unreachable");
 
@@ -109,6 +113,7 @@ registerInterface(function() {
                 el.setAttribute("data-remaining", total);
                 el.parentNode.querySelector("[for='" + el.id + "'] + [name='remaining']").innerHTML = total;
             }
+            renderOverlay();
         };
 
         /**

@@ -249,6 +249,16 @@ registerInterface(function combatMapScript() {
     };
 
     /**
+     * Gets the mob whose turn it is.
+     * @returns {object} The mob if any.
+     */
+    public.getTurn = function() {
+        var el = _mapEl.getElementsByClassName("hasTurn");
+        el = el && el[0];
+        return public.getMobWithId(el.getAttribute("data-id"));
+    };
+
+    /**
      * Adds an event in the context of the combat map that can be unbound easily.
      * @param {string} selector querySelectorAll parameter.
      * @param {string} event name of the event.
@@ -299,16 +309,20 @@ registerInterface(function combatMapScript() {
      * @returns {object} The mob.
      */
     public.getMobWithId = function(id) {
-        var i, array;
+        var i, array, result;
 
         if (!_mobIndex[id]) {
             return null;
         }
+        el = _mapEl.querySelector("[data-id='" + id + "']");
 
         array = public.getMob(_mobIndex[id].x, _mobIndex[id].y);
+
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], { id : id})) {
-                return array[i];
+                result = clone(array[i]);
+                result.hasTurn = el.classList.contains("hasTurn");
+                return result;
             }
         }
     };
@@ -341,6 +355,10 @@ registerInterface(function combatMapScript() {
         if (isEqual(data.id, window.playerId)) {
             el.classList.add("isMyPc");
         }
+        if (data.hasTurn) {
+            el.classList.add("hasTurn");
+        }
+
         el.setAttribute("data-id", data.id);
         el.setAttribute("title", data.character_name);
         el.innerHTML = (data.character_name || "?")[0];
