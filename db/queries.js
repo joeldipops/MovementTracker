@@ -1,4 +1,26 @@
 module.exports = {
+    saveNewMap: `
+INSERT INTO Map(Name, Data)
+VALUES($1, $2)
+    ;`,
+
+    updateMap: `
+UPDATE Map
+SET
+    Name = $2,
+    Data = $3
+WHERE MapId = $1
+    ;`,
+
+    getMap: `
+SELECT MapId, Name, Data
+FROM Map
+WHERE MapId = $1
+    ;`,
+    getMaps: `
+SELECT MapId, Name
+FROM Map
+    ;`,
 
     createSession : `
 INSERT INTO WebSession

@@ -4,6 +4,10 @@ config = require("./config.js");
 
 module.exports = {
     runQuery : function(sql, params, done) {
+        if (!sql) {
+            console.error("No query provided");
+            return done(null);
+        }
         if (!done) { done = function() {}; }
         postgres.connect(config.DB_CONNECTION_STRING, function(err, client, close) {
             var i, regex, value;

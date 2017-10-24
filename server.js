@@ -38,6 +38,9 @@ server.get(/session\/[0-9]+\/map/, downloadMap);
 server.put(/session\/[0-9]+\/map/, uploadMap);
 server.del(/session\/[0-9]+\/map/, resetMap);
 
+server.get("maps", getSavedMaps);
+server.get(/map\/[0-9]+/, getMap);
+server.post("maps", saveMap);
 
 server.get(/session(\/[0-9]+)?$/, getSession);
 server.del(/session\/[0-9]+/,deleteSession);
@@ -421,6 +424,55 @@ function getPlayPage(req, res) {
 function getReadyPage(req, res) {
     var content = fs.readFileSync("template/ready.html");
     return serveHtml(res, content);
+};
+
+/**
+ * Gets the list of saved maps.
+ */
+function getSavedMaps(req, res) {
+    db.runQuery(queries.getMaps, null, function(result) {
+        if (!result) {
+            return serveJSON(res, {});
+        }
+        return serveJSON(res, result.rows);
+    });
+};
+
+/**
+ * Gets a pre-made map from the database.
+ */
+function getMap(req, res) {
+    var mapId = getEntityId("map", req);
+    db.runQuery(queries.getMap, [mapId], function(result) {
+        var body;
+        if (!result || !result.rows[0]) {
+            return serveError(res, "Not Found", 404);
+        }
+        body = {
+            map_id : result.rows[0].mapid,
+            name : result.rows[0].name,
+            data : JSON.parse(result.rows[0].data)
+        };
+        return serveJSON(res, body);
+    });
+};
+
+/**
+ * Creates or updates a pre-made map in the database.
+ */
+function saveMap(req, res) {
+    var callback, dataString;
+    dataString = JSON.stringify(req.body.data);
+
+    callback = function() {
+        return serveJSON(res, {});
+    };
+
+    if (req.body.map_id) {
+        db.runQuery(queries.updateMap, [req.body.map_id, req.body.name, dataString], callback);
+    } else {
+        db.runQuery(queries.saveNewMap, [req.body.name, dataString], callback);
+    }
 };
 
 /**
