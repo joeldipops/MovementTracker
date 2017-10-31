@@ -73,6 +73,7 @@
         <label for="mapControlsTab">MAP</label>
         <fieldset class="tabSection" id="mapOptions">
             <legend class="hidden"></legend>
+            <select id="mapSelector" name="existingMap" class="ctrl-flat"></select>
             <div class="ctrl-coordinate">
                 <div class="ctrl-labelledNumber">
                     <input id="mapWidth" type="number" name="mapWidth" value="12" placeholder="width" />
@@ -82,7 +83,9 @@
                     <input id="mapHeight" type="number" name="mapHeight" value="12" placeholder="height" />
                 </div>
             </div>
-            <button class="ctrl-flat" name="updateMap">UPDATE</button>
+            <input type="text" name="mapName" class="ctrl-flat" />
+            <button class="ctrl-flat" name="updateMap">APPLY</button>
+            <button class="ctrl-flat" name="saveMap">SAVE</button>
         </fieldset>
 
         <input type="radio" name="controlTab" id="mobControlsTab" />

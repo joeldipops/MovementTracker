@@ -4,7 +4,7 @@
     }
     window.MovementTracker.UNITS_PER_TILE = 5;
     window.MovementTracker.DEFAULT_WALK_SPEED = 30;
-    window.MovementTracker.SCRIPT_LOAD_TIMEOUT = 30000;
+    window.MovementTracker.SCRIPT_LOAD_TIMEOUT = 5000;
 
     window.MovementTracker.CONDITIONS = {
         down : "down",

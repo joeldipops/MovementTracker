@@ -1,5 +1,4 @@
-var mainEl,
-    onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
+var mainEl, onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
     showAlert, sendHttpRequest, replaceBody, loadExternalScript, registerInterface;
 
 pageContext ={};
@@ -202,14 +201,18 @@ var setup = function() {
         _pendingTimeouts.push(timerId);
         return timerId;
     };
-    
 
+    rejectedPromise = function() {
+        return new Promise(function(resolve, reject) { reject() });
+    };
+    
     /**
      * Keeps track of pending promises so they can be rejected when no longer needed.
      * @param {function} callback The promise callback
+     * @param {string} interrupt If a new request with the same interrupt as an existing one is made, the old one is rejected.
      * @returns {Promise} a promise generated from the callback.
      */
-    newPromise = function(callback) {
+    newPromise = function(callback, interrupt) {
         var innerPromise, resultPromise, cancelFlag;
         // resolve immediately;
         if (!callback) {
@@ -218,6 +221,16 @@ var setup = function() {
 
         // When cancelled, promise will no longer fire.
         cancelFlag = { value : false };
+
+        if (interrupt) {
+            _pendingCancelFlags.forEach(function(flag) {
+                if (flag.interrupt === interrupt) {
+                    flag.value = true;
+                }
+            });
+            cancelFlag.interrupt = interrupt;
+        }
+
         _pendingCancelFlags.push(cancelFlag);
 
         innerPromise = new Promise(callback);
@@ -227,12 +240,12 @@ var setup = function() {
             .then(function() {
                 if (!cancelFlag.value) {
                     resolve.apply(null, arguments);
+                } else {
+                    reject.apply(null, arguments);
                 }
             })
             .catch(function() {
-                if (!cancelFlag.value) {
-                    reject.apply(null, arguments);
-                }
+                reject.apply(null, arguments);
             });
         });
         return resultPromise;
@@ -317,6 +330,9 @@ var setup = function() {
      * @param {string} method The HTTP method.
      * @param {object} data to send with the request (only json supported atm}
      * @param {object} options to override default behaviour.
+     ** {string} interrupt If a new request with the same interrupt as an existing one is made, the old one is rejected.
+     ** {boolean} isPersistent The call will continue even if the global pge changes.
+     ** {string} type Sets the Content-Type header on the request.
      * @returns {Promise} promise that resolves or rejects when request returns.
      */
     sendHttpRequest = function(url, method, data, options) {
@@ -354,7 +370,7 @@ var setup = function() {
         if (options.isPersistent) {
             return new Promise(onPromise);
         } else {
-            return newPromise(onPromise);
+            return newPromise(onPromise, options.interrupt);
         }
     };
 
@@ -429,6 +445,8 @@ var setup = function() {
      * Dynamically loads a script at the given url.
      * @param {string} name To reference the interface by.
      * @param {string} src The url of the script.
+     * @param {string} name To reference the interface of the script.
+     * @returns {Promise} Promise providing access to the public interface of the script.
      */
     loadExternalScript = function(name, src) {
         var script, result;
@@ -525,7 +543,9 @@ var setup = function() {
         return document.querySelector("[src='" + src + "']");
     };
 
-    // Sets up a websocket connection with the server.
+    /**
+     * Sets up a websocket connection with the server.
+     */
     socketControl = function(socketAddress) {
         var socket, sendMessage, onReceiveMessage;
         socket = new WebSocket(socketAddress, "echo-protocol");

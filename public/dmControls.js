@@ -1,8 +1,9 @@
 registerInterface(function() {
     function dmControlsScript(main, map, mobList) {
         var _menuEl, _template,
-            onSetupStart, onClearClicked, onStartClicked, onResetClicked, onPositionClicked, toggleMob,
-            renderDmMenu, onMapSizeChange, onUpdateMapClick, addNpc, resetMap, setTurn, resetEvents, addTerrain,
+            onMapSelected, onSetupStart, onClearClicked, onStartClicked, onResetClicked, onPositionClicked,
+            onMapSizeChange, onUpdateMapClick, onMapSaveClick,
+            toggleMob, addNpc, resetMap, setTurn, resetEvents, addTerrain, renderDmMenu, renderMpList,
             main_renderMenu, main_toggleMob;
 
         _menuEl = document.getElementById("controls");
@@ -23,6 +24,54 @@ registerInterface(function() {
             main.renderMenu();
             resetMap();
             onEvent(window.socket, "message", main.onMessageReceived);
+        };
+
+        /**
+         * When the DM selects an existing map from the menu, load it.
+         */
+        onMapSelected = function(event) {
+            if (event.currentTarget.value === "0") {
+                onMapSizeChange();
+            } else {
+                // Fetch the saved map & render it.
+                sendHttpRequest("map/" + event.currentTarget.value, "GET", null, { interrupt : "onMapSelected" })
+                .then(function(response) {
+                    response = JSON.parse(response.responseText);
+                    map.renderMap(response.data, _template);
+                });
+            }
+        };
+
+        /**
+         * When the DM wants to save the current state of the map to the DB.
+         * @returns {Promise} resolves when save is completed.
+         */
+        onSaveMapClick = function() {
+            var data, id, name, promise;
+            data = map.mapToJSON();
+            id = _menuEl.querySelector("#mapSelector").value;
+            name = _menuEl.querySelector("[name='mapName']").value;
+
+            if (!name) {
+                // TODO - validation
+                return rejectedPromise();
+            }
+
+            if (parseInt(id)) {
+                promise = sendHttpRequest("maps", "PUT", {
+                    map_id : id,
+                    name : name,
+                    data : data
+                });
+            } else {
+                promise = sendHttpRequest("maps", "POST", {
+                    name : name,
+                    data : data
+                });
+            }
+
+            return promise.then(renderMapList)
+            .catch(function() { debugger; });
         };
 
         /**
@@ -55,8 +104,10 @@ registerInterface(function() {
          */
         main_renderMenu = main.renderMenu;
         main.renderMenu = function(template) {
-            var menu, el, i, option;
+            var menu, el, i, select, option;
             main_renderMenu(document.getElementById("template-dmControls").innerHTML);
+
+            renderMapList();
 
             // NPC creature sizes.
             el = _menuEl.querySelector("#mobOptions [name='npcSize']");
@@ -75,7 +126,7 @@ registerInterface(function() {
                 if (!MovementTracker.TERRAIN_TYPES.hasOwnProperty(i)) {
                     continue;
                 }
-                
+
                 el.insertAdjacentHTML(
                     "beforeend",
                     option.replace(/{type}/g, i)
@@ -124,6 +175,42 @@ registerInterface(function() {
             onEvent("button[name='start']", "click", onStartClicked);
 
             onEvent("button[name='reset']", "click", onResetClicked);
+            onEvent("[name='existingMap']", "change", onMapSelected);
+            onEvent("[name='saveMap']", "click", onSaveMapClick);
+        };
+
+        /**
+         * Shows the list of ssaved maps in the select control.
+         */
+        renderMapList = function() {
+            var result;
+
+            select = _menuEl.querySelector("#mapSelector");
+            while(select.firstChild) {
+                select.removeChild(select.firstChild);
+            }
+
+            result = sendHttpRequest("maps", "GET")
+            .then(function(response) {
+                var i;
+                response = JSON.parse(response.responseText);
+
+                for(i = 0; i < response.length; i++) {
+                    option = document.createElement("option");
+                    option.setAttribute("value", response[i].map_id);
+                    option.innerHTML = response[i].name;
+                    select.appendChild(option);
+                }
+            })
+            // We can handle this one and continue "maps can't be loaded" whatever.
+            .catch(function() {});
+
+            option = document.createElement("option");
+            option.setAttribute("value", "0");
+            option.innerHTML = "&lt;New Map&gt;";
+            select.appendChild(option);
+
+            return result;
         };
 
         /**

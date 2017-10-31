@@ -16,7 +16,7 @@ socketServerControl = require("./socketServer.js");
 body = fs.readFileSync("template/container.html");
 
 server = restify.createServer();
-server.use(restify.bodyParser());
+server.use(restify.plugins.bodyParser());
 server.get(/public\/.*/, getStaticFile);
 server.get("/", getIndex);
 server.get("/page/home", getIndex);
@@ -40,7 +40,9 @@ server.del(/session\/[0-9]+\/map/, resetMap);
 
 server.get("maps", getSavedMaps);
 server.get(/map\/[0-9]+/, getMap);
+server.put("maps", saveMap);
 server.post("maps", saveMap);
+
 
 server.get(/session(\/[0-9]+)?$/, getSession);
 server.del(/session\/[0-9]+/,deleteSession);
@@ -431,10 +433,19 @@ function getReadyPage(req, res) {
  */
 function getSavedMaps(req, res) {
     db.runQuery(queries.getMaps, null, function(result) {
+        var i, body;
         if (!result) {
             return serveJSON(res, {});
         }
-        return serveJSON(res, result.rows);
+        body = [];
+        for (i = 0; i < result.rows.length; i++) {
+            body.push({
+                name : result.rows[i].name,
+                map_id : result.rows[i].mapid,
+                data : result.rows[i].data
+            })
+        }
+        return serveJSON(res, body);
     });
 };
 
@@ -462,10 +473,21 @@ function getMap(req, res) {
  */
 function saveMap(req, res) {
     var callback, dataString;
+
+    // Check that  request came through the correct channel.  PUTs should be guaranteed idempotent
+    if (req.getRoute().method === "PUT" && !req.body.map_id) {
+        return serveError(res, "map_id property is required", 400);
+    }
+
     dataString = JSON.stringify(req.body.data);
 
-    callback = function() {
-        return serveJSON(res, {});
+    callback = function(result) {
+        var id = (result.rows && result.rows[0] && result.rows[0].mapid) || req.body.map_id;
+        return serveJSON(res, {
+            map_id : id,
+            data : req.body.data,
+            name : req.body.name
+        });
     };
 
     if (req.body.map_id) {

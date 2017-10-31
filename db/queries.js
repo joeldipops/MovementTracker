@@ -2,6 +2,7 @@ module.exports = {
     saveNewMap: `
 INSERT INTO Map(Name, Data)
 VALUES($1, $2)
+RETURNING MapId
     ;`,
 
     updateMap: `

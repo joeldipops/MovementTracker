@@ -503,6 +503,6 @@ registerInterface(function combatMapScript() {
             }
         }
     };
-    
+
     return public;
 });

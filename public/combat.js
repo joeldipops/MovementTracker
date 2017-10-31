@@ -3,7 +3,7 @@ registerInterface(function() {
         var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
             onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
             onDashChange, onTerrainClick, onPlayerMove, onMoveSelected, onReactClicked,
-            addMob, relocateMob, removeMob, renderOverlay, toggleMob, isTileFreeForMob, 
+            addMob, relocateMob, removeMob, renderOverlay, toggleMob, isTileFreeForMob,
             _template, _reactTemplate, _menuEl;
 
         _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML

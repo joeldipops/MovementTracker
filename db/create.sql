@@ -60,6 +60,14 @@ CREATE TABLE WebSession (
     CONSTRAINT PK_WebSession PRIMARY KEY (WebSessionId)
 );
 
+CREATE TABLE Map (
+    MapId serial NOT NULL,
+    Name text NOT NULL,
+    Data text NOT NULL,
+
+    CONSTRAINT PK_Map PRIMARY KEY (MapId)
+);
+
 CREATE TABLE Race (
     RaceId serial NOT NULL,
     Name text NOT NULL,
