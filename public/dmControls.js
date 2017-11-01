@@ -36,7 +36,21 @@ registerInterface(function() {
                 // Fetch the saved map & render it.
                 sendHttpRequest("map/" + event.currentTarget.value, "GET", null, { interrupt : "onMapSelected" })
                 .then(function(response) {
+                    var k, i, mobs;
                     response = JSON.parse(response.responseText);
+                    _menuEl.querySelector("[name='mapWidth']").value = response.data.width;
+                    _menuEl.querySelector("[name='mapHeight']").value = response.data.height;
+                    _menuEl.querySelector("[name='mapName']").value = response.name;
+
+                    mobs = response.data.mobs;
+                    for(k in mobs) {
+                        if (!mobs.hasOwnProperty(k)) {
+                            continue;
+                        }
+                        for (i = 0; i < mobs[k].length; i++) {
+                            mobList.addMob(mobs[k][i]);
+                        }
+                    }
                     map.renderMap(response.data, _template);
                 });
             }
@@ -47,9 +61,11 @@ registerInterface(function() {
          * @returns {Promise} resolves when save is completed.
          */
         onSaveMapClick = function() {
-            var data, id, name, promise;
-            data = map.mapToJSON();
-            id = _menuEl.querySelector("#mapSelector").value;
+            var data, id, select, name, promise;
+            data = map.mapToJSON({ ignorePlayers: true });
+
+            select = _menuEl.querySelector("#mapSelector");
+            id = select.value;
             name = _menuEl.querySelector("[name='mapName']").value;
 
             if (!name) {
@@ -57,7 +73,9 @@ registerInterface(function() {
                 return rejectedPromise();
             }
 
-            if (parseInt(id)) {
+            id = parseInt(id);
+
+            if (id) {
                 promise = sendHttpRequest("maps", "PUT", {
                     map_id : id,
                     name : name,
@@ -70,7 +88,20 @@ registerInterface(function() {
                 });
             }
 
-            return promise.then(renderMapList)
+            return promise.then(function(response) {
+                // Keep the id of a newly saved map.
+                if (!id) {
+                    response = JSON.parse(response.responseText);
+                    id = response.map_id;
+                }
+                return renderMapList();
+            })
+            .then(function() {
+                // select the map you just saved.
+                if (id) {
+                    select.value = id;
+                }
+            })
             .catch(function() { debugger; });
         };
 

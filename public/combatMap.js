@@ -47,10 +47,14 @@ registerInterface(function combatMapScript() {
     
     /**
      * Converts the mobs on the map into a format that can be consumed as json.
+     * @param {object} options to change what's reflected im the map.
+     ** {boolean} ignorePlayers If true, locations and stats of player mobs will not be included.
      * @returns {object} the hash of mobs.
      */
-    getMobsJson = function() {
-        var result = {};
+    getMobsJson = function(options) {
+        var nextMob, result;
+        result = {};
+        options = options || {};
         for (k in _mobIndex) {
             if (!_mobIndex.hasOwnProperty(k)) {
                 continue;
@@ -60,7 +64,13 @@ registerInterface(function combatMapScript() {
                 result[key] = [];
             }
 
-            result[key].push(public.getMobWithId(k));
+            nextMob = public.getMobWithId(k);
+
+            if (!options.ignorePlayers || nextMob.mob_type !== "pc") {
+                result[key].push(public.getMobWithId(k));
+            }
+
+
         }
         return result;
     };
@@ -463,9 +473,11 @@ registerInterface(function combatMapScript() {
 
     /**
      * Converts map to a transmittable object.
+     * @param {object} options to change what's reflected im the map.
+     ** {boolean} ignorePlayers If true, locations and stats of player mobs will not be included.
      * @returns {object} The map as a json object.
      */
-    public.mapToJSON = function() {
+    public.mapToJSON = function(options) {
         var result, k, i, x, y, key,
             width, height, terrains, mob;
         width = parseInt(_mapEl.getAttribute("data-width"));
@@ -479,7 +491,7 @@ registerInterface(function combatMapScript() {
         result.terrains = getTerrainsJson();
 
         //Find all the mobs.
-        result.mobs = getMobsJson();
+        result.mobs = getMobsJson(options);
 
         return result;
     };

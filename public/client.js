@@ -202,8 +202,13 @@ var setup = function() {
         return timerId;
     };
 
-    rejectedPromise = function() {
-        return new Promise(function(resolve, reject) { reject() });
+    /**
+     * Creates a promise and rejects it immediately.
+     * @param {object} result data to pass to any catch handlers
+     * @returns {Promise} The rejected promise.
+     */
+    rejectedPromise = function(result) {
+        return new Promise(function(resolve, reject) { reject(result) });
     };
     
     /**
@@ -443,9 +448,8 @@ var setup = function() {
 
     /**
      * Dynamically loads a script at the given url.
-     * @param {string} name To reference the interface by.
-     * @param {string} src The url of the script.
      * @param {string} name To reference the interface of the script.
+     * @param {string} src The url of the script.
      * @returns {Promise} Promise providing access to the public interface of the script.
      */
     loadExternalScript = function(name, src) {
