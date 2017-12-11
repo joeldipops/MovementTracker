@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "test": "ava"
+  },
+  "devDependencies": {
+    "ava": "^0.24.0",
+    "browser-env": "^3.2.4"
+  },
+  "dependencies": {
+    "window": "^4.2.4"
+  }
+}
