@@ -1,5 +1,5 @@
 (function utils() {
-    var nativeParseInt, nativeSetTimeout, U;
+    var U;
 
     if (!window.MovementTracker) {
         window.MovementTracker = {};
@@ -7,10 +7,90 @@
 
     U = window.MovementTracker.utils = {
         /**
+         * Checks if two functions have the same behaviour.
+         * @param first {function} first function.
+         * @param second {function} second funtion.
+         * @returns {boolean} true if functions are equivalent.
+         * @throws {Error} if one or both params is not a function.
+         */
+        functionEquals: function(first, second) {
+            if (typeof first !== "function" || typeof second !== "function") {
+                throw new Error();
+            }
+            if (first.toString() !== second.toString()) {
+                return false;
+            }
+            return U.valueEquals(first.prototype, second.prototype);
+        },
+
+        
+        /**
+         * Compares two values of any type and returns true if all properties are equal.
+         * @param {*} first First value to compare.
+         * @param {*} second Second value to compare.
+         * @returns {boolean} true if values are equal.
+         * @remarks Circular references are a scary problem at this stage.
+         */
+        valueEquals : function(first, second) {
+            var i, k;
+            switch(typeof first) {
+                case "object":
+                    break;
+                case "string":
+                case "boolean":
+                case "number":
+                case "undefined":
+                    return first === second;
+                case "function":
+                    if (typeof second !== "function") {
+                        return false;
+                    }
+                    return U.functionEquals(first, second);
+                default:
+                    throw "not implemented";
+            }
+
+            if (first === null) {
+                return second === null;
+            }
+
+            // All falsy values accounted for, so if second if false, it's not equal.
+            if (!second) {
+                return false;
+            }
+
+            if (Array.isArray(first)) {
+                if (first.length !== second.length) {
+                    return false;
+                }
+                for (i = 0; i < first.length; i++) {
+                    if (!U.valueEquals(first[i], second[i])) {
+                        return false;
+                    }
+                }
+                return true;
+            } else {
+                if (Object.keys(first).length !== Object.keys(second).length) {
+                    return false;
+                }
+                if (!U.valueEquals(Object.getPrototypeOf(first), Object.getPrototypeOf(second))) {
+                    return false;
+                }
+                for (k in first) {
+                    if (!U.valueEquals(first[k], second[k])) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+        },
+        
+        /**
          * Makes a clone of an object or array.
          * @param {object} object
          * @param {boolean} full also copies the prototype etc.
          * @returns {object} the clone.
+         * @remarks Circular references are a scary problem at this stage.
          */
         clone : function(object, full) {
             var k, result;

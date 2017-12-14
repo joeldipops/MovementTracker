@@ -11,7 +11,6 @@ ava.test.beforeEach(function() {
 ava.after.always(function(){
     delete global.window;
     delete global.WebSocket;
-    
 });
 
 ava.test("isNatural", function(t) {
@@ -29,11 +28,102 @@ ava.test("isNatural", function(t) {
     t.false(obj.isNatural(NaN));
 });
 
+/*
 ava.test("parseInt", function(t) {
     t.not(global.parseInt, window.parseInt);
     t.is(1, window.parseInt("1"));
     t.true(isNaN(window.parseInt("F")));
     t.is(15, window.parseInt("F", 16));
+});
+*/
+
+ava.test("valueEquals", function(t) {
+    var obj = window.MovementTracker.utils;
+
+    t.true(obj.valueEquals(1, 1));
+    t.true(obj.valueEquals(null, null));
+    t.true(obj.valueEquals(void 0, undefined));
+    t.false(obj.valueEquals(null, undefined));
+    t.true(obj.valueEquals(false, false));
+    t.false(obj.valueEquals(true, false));
+    t.true(obj.valueEquals("", ""))
+    t.false(obj.valueEquals(1, "1"));
+    t.true(obj.valueEquals("Hello", "Hello"));
+    t.false(obj.valueEquals("Hello", "World"));
+
+    t.true(obj.valueEquals([], []));
+    t.true(obj.valueEquals({}, {}));
+    t.false(obj.valueEquals([], {}));
+    t.false(obj.valueEquals({}, []));
+    t.false(obj.valueEquals([], ""));
+    t.false(obj.valueEquals("", []));
+
+    t.true(obj.valueEquals(
+        ["one", 2, "3"],
+        ["one", 2, "3"]
+    ));
+
+    t.false(obj.valueEquals(
+        ["one", 2, "3"],
+        ["one", 2, "3", 4]
+    ));
+
+    t.false(obj.valueEquals(
+        ["one", 2, "3", 4],
+        ["one", 2, "3"]
+    ));
+
+    t.false(obj.valueEquals(
+        ["one", 2, "3"],
+        ["3", "one", 2],
+    ));
+
+    t.true(obj.valueEquals(
+        { "a" : 1, "b" : 2 },
+        { b : 2, a : 1 }
+    ));
+
+    t.false(obj.valueEquals(
+        { "a" : 1 },
+        { "a" : 2 }
+    ));
+
+    t.true(obj.valueEquals(
+        { "a" : 1, "b" : { "c" : 3 }},
+        { "b" : { "c": 3 }, "a" : 1 }
+    ));
+    
+
+    var f = function() {};
+    f.prototype.foo = function() {};
+
+    var g = function() {};
+    g.prototype.bar = function() {};
+    
+    var first = new f();
+    var second = new f();
+
+    first.a = "abc";
+    second.a = "abc";
+
+    t.true(obj.valueEquals(first, second));
+
+    var second = new g();
+    second.a = "abc";
+
+    t.false(obj.valueEquals(first, second));
+});
+
+ava.test("clone", function(t) {
+    var obj, input, output;
+    var obj = window.MovementTracker.utils;
+    input = { "a" : 1, "b" : { "c" : 3 }};
+    output = obj.clone(input);
+
+    t.not(input, output);
+    t.true(obj.valueEquals(input, output));
+
+    t.fail("Test not complete");
 });
 
 ava.test("isEqual", function(t) {
@@ -44,6 +134,29 @@ ava.test("isEqual", function(t) {
     t.false(obj.isEqual("1", "-1"));
     t.true(obj.isEqual(1, "1"));
     t.true(obj.isEqual("-1", -1));
+});
+
+ava.test("toQueryString", function(t) {
+    var obj, input, output;
+    obj = window.MovementTracker.utils;
+    input = {};
+    output = obj.toQueryString(input);
+
+    t.true(typeof output === "string");
+    t.is("?", output);
+    
+    input = { key : "value" };
+    output = obj.toQueryString(input);
+
+    t.is("?key=value", output);
+
+    input = { key : "value", question : "answer" };
+    output = obj.toQueryString(input);
+    t.true(output.indexOf("key=value") >= 0);
+    t.true(output.indexOf("question=answer") >= 0);
+    t.true(output.startsWith("?"));
+    t.true(output.indexOf("&") >= 0);
+    t.is(26, output.length);
 });
 
 ava.test("wait", async function(t) {
