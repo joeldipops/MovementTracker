@@ -1,6 +1,8 @@
 registerInterface(function combatMapScript() {
     var _mapEvents, _mapEl, _mobs, _mobIndex,
-        isSameMob, toggleConditions, getTerrainsJson, getMobsJson, public;
+        isSameMob, toggleConditions, getTerrainsJson, getMobsJson, public,
+        U;
+    U = MovementTracker.utils;
 
     public = {};
 
@@ -125,7 +127,7 @@ registerInterface(function combatMapScript() {
     public.resizeMap = function(data, template) {
         var k, oldHeight, oldWidth, mob, mobsData, offset, isOffMap, key;
 
-        if (!(isNatural(data.width)) && isNatural(data.height)) {
+        if (!(U.isNatural(data.width)) && U.isNatural(data.height)) {
             return ;
         }
 
@@ -330,7 +332,7 @@ registerInterface(function combatMapScript() {
 
         for (i = 0; i < array.length; i++) {
             if (isSameMob(array[i], { id : id})) {
-                result = clone(array[i]);
+                result = U.clone(array[i]);
                 result.hasTurn = el.classList.contains("hasTurn");
                 return result;
             }
@@ -362,7 +364,7 @@ registerInterface(function combatMapScript() {
 
         el = document.createElement("div");
         el.classList.add("mob");
-        if (isEqual(data.id, window.playerId)) {
+        if (U.isEqual(data.id, window.playerId)) {
             el.classList.add("isMyPc");
         }
         if (data.hasTurn) {

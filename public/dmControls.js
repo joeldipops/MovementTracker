@@ -342,7 +342,7 @@ registerInterface(function() {
             mobList.offListEvent("position", onPositionClicked);
             mobList.offListEvent("toggleMob", toggleMob);
             mobList.offListEvent("setTurn", setTurn);
-            mobList.offListEvent("react", main.onReactClicked);
+            mobList.offListEvent("react", main.onReactClick);
             onEvent(window.socket, "message", main.onMessageReceived);
         };
 

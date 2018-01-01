@@ -1,7 +1,5 @@
-var mainEl, onEvent, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
-    showAlert, sendHttpRequest, replaceBody, loadExternalScript, registerInterface;
-
-pageContext ={};
+var mainEl, onEvent, offEvents, closePage, newPromise, wait, clone, parseInt, runAsync, isEqual,
+    showAlert, sendHttpRequest, replaceBody, loadExternalScript, registerInterface, isNatural;
 
 if (!window.MovementTracker) {
     window.MovementTracker = {};

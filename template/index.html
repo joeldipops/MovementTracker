@@ -62,7 +62,8 @@
 </fieldset>
 <script type="application/javascript">
 function indexScript(mobList) {
-    var onClickStart, onMessageReceived, onChangeInput, hideDmButton, renderMovement;
+    var onClickStart, onMessageReceived, onChangeInput, hideDmButton, renderMovement, U;
+    U = MovementTracker.utils;
 
     document.body.setAttribute("data-state", "lobby");
 
@@ -111,7 +112,7 @@ function indexScript(mobList) {
 
         data = JSON.parse(result.responseText);
         if (data.is_dm_set) {
-            wait(hideDmButton);
+            U.wait(hideDmButton);
         }
     })
     .catch(function() {
@@ -208,7 +209,7 @@ function indexScript(mobList) {
         }
     };
 
-    wait(function() {
+    U.wait(function() {
         var buttons, inputs, i;
         if (mainEl) {
             inputs = mainEl.querySelectorAll("input");
@@ -226,11 +227,18 @@ function indexScript(mobList) {
         return false;
     });
 };
-wait (function() {
-    if (window.coreReady) {
-        loadExternalScript("mobList", "public/mobList.js").then(indexScript);
-        return true;
-    }
-    return false;
-});
+function start() {
+    window.MovementTracker.utils.wait (function() {
+        if (window.coreReady) {
+            loadExternalScript("mobList", "public/mobList.js").then(indexScript);
+            return true;
+        }
+        return false;
+    });
+}
+if (window.MovementTracker && window.MovementTracker.utils) {
+    start();
+} else {
+    document.addEventListener('DOMContentLoaded', start);
+}
 </script>

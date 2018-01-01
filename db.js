@@ -1,5 +1,5 @@
-var postgres, config;
-postgres = require("pg");
+var pg, postgres, config;
+pg = require("pg");
 config = require("./config.js");
 
 module.exports = {
@@ -9,7 +9,9 @@ module.exports = {
             return done(null);
         }
         if (!done) { done = function() {}; }
-        postgres.connect(config.DB_CONNECTION_STRING, function(err, client, close) {
+
+        postgres = new pg.Pool({ connectionString : config.DB_CONNECTION_STRING });
+        postgres.connect(function(err, client, close) {
             var i, regex, value;
             if (err) {
                 console.error(JSON.stringify(err));

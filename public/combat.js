@@ -1,10 +1,13 @@
 registerInterface(function() {
     function mainCombatScript(combatMap, mobList, dmControls) {
-        var updateMap, triggerNextTurn, renderMenu, resetMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
-            onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onCombatStart, onPlayStart, onSetupStart,
-            onDashChange, onTerrainClick, onPlayerMove, onMoveSelected, onReactClicked,
-            addMob, relocateMob, removeMob, renderOverlay, toggleMob, isTileFreeForMob,
-            _template, _reactTemplate, _menuEl;
+        var updateMap, triggerNextTurn, renderMenu, resetMenu, unlockMenu, attemptMove, getDistance, subtractMovement, getSpeedPriority,
+            onMessageReceived, onTurnStart, onMyTurnStart, onReactionUsed, onReactionComplete, onCombatStart, onPlayStart, onSetupStart,
+            onDashChange, onTerrainClick, onPlayerMove, onMoveSelected, onReactClick, onDoneClick,
+            addMob, relocateMob, removeMob, renderOverlay, toggleMob, isTileFreeForMob, 
+            _template, _reactTemplate, _menuEl,
+            U;
+        
+        U = MovementTracker.utils;
 
         _reactTemplate = mainEl.querySelector("#template-reactionAlert").innerHTML
         _template = mainEl.querySelector("#template-combatCell").innerHTML;
@@ -23,10 +26,22 @@ registerInterface(function() {
                 for (i = 0; i < data.mobs[k].length; i++) {
                     mobList.addMob(data.mobs[k][i], {
                         isUpdate: true,
-                        isTurn: isEqual(data.mobs[k][i].id, turnMobId),
+                        isTurn: U.isEqual(data.mobs[k][i].id, turnMobId),
                         isInCombat: true
                     });
                 }
+            }
+        };
+
+        /**
+         * DM has a tab menu that must be shown and hidden when moving through turns
+         */
+        unlockMenu = function() {
+            var tab;
+            if (tab = _menuEl.querySelector("#turnControlsTab")) {
+                tab.classList.remove("hiddenTab");
+                _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 4);
+                tab.checked = true;
             }
         };
 
@@ -42,7 +57,6 @@ registerInterface(function() {
             template = template || document.getElementById("template-controls").innerHTML;
             _menuEl.insertAdjacentHTML("beforeend", template);
 
-            onEvent("[name='done']", "click", triggerNextTurn);
             onEvent("[name='dashAction']", "change", onDashChange);
             onEvent("[name='dashBonus']", "change", onDashChange);
         };
@@ -151,7 +165,32 @@ registerInterface(function() {
             // Auto select walk.
             el.querySelector("[name='movementType'][value='walk']").checked = true;
             onEvent("[name='movementType']", "click", onMoveSelected.bind({}, data), "turn");
+            onEvent("[name='done']", "click", onDoneClick.bind({}, data), "turn");
         }
+
+        /**
+         * When a mob has finished a turn or reaction.
+         * @param {object} data The mob that finished their turn.
+         */
+        onDoneClick = function(data) {
+            if (document.body.hasAttribute("data-isMyTurn")) {
+                return triggerNextTurn();
+            } else if (document.body.hasAttribute("data-isMyReaction")) {
+                sendHttpRequest("session/" + window.sessionId + "/broadcast", "POST", {
+                    message : { player_reacted : { id : data.id } }
+                });
+                document.body.removeAttribute("data-isMyReaction");
+                combatMap.removeClass("reachable");
+                combatMap.removeClass("unreachable");
+                combatMap.removeMapEvents();
+
+                if (el = _menuEl.querySelector("#turnControlsTab")) {
+                    el.checked = false;
+                    el.classList.add("hiddenTab");
+                    _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 3);
+                }
+            }
+        };
 
         /**
         * Determines who has the next turn and broadcasts to everyone.
@@ -198,7 +237,7 @@ registerInterface(function() {
             if (data.mob_type === "npc" && document.body.hasAttribute("data-isDm")) {
                 // DM's turn for NPCs
                 onMyTurnStart(data);
-            } else if (isEqual(data.id, window.playerId)) {
+            } else if (U.isEqual(data.id, window.playerId)) {
                 // Player's turn.
                 onMyTurnStart(data);
                 message = "<h1>Your Turn</h1>";
@@ -540,7 +579,7 @@ registerInterface(function() {
             }
 
             // If you just moved, or you as the DM just moved an NPC, reclculate the overlay.
-            if (document.body.hasAttribute("data-isMyTurn") && (isEqual(mob.id, window.playerId) || (mob.mob_type === "npc" && document.body.hasAttribute("data-isDm")))) {
+            if ((document.body.hasAttribute("data-isMyTurn") || document.body.hasAttribute("data-isMyReaction")) && (U.isEqual(mob.id, window.playerId) || (mob.mob_type === "npc" && document.body.hasAttribute("data-isDm")))) {
                 renderOverlay(mob);
             }
 
@@ -556,12 +595,7 @@ registerInterface(function() {
 
             document.body.setAttribute("data-isMyTurn", "isMyTurn");
             resetMenu(data);
-            // DM has a tab menu that must be shown and hidden when moving through turns
-            if (tab = _menuEl.querySelector("#turnControlsTab")) {
-                tab.classList.remove("hiddenTab");
-                _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 4);
-                tab.checked = true;
-            }
+            unlockMenu();
             mobList.toggleReaction(data.id, true);
             onMoveSelected(data);
         };
@@ -608,6 +642,9 @@ registerInterface(function() {
             }
             if (data["player_react"]) {
                 onReactionUsed(data["player_react"]);
+            }
+            if (data["player_reacted"]) {
+                onReactionComplete(data["player_reacted"]);
             }
             if (data["combat_start"]) {
                 onCombatStart();
@@ -674,7 +711,7 @@ registerInterface(function() {
                 if (document.body.hasAttribute("data-isDM")) {
                     onCombatStart();
                 }
-                mobList.onListEvent("react", onReactClicked);
+                mobList.onListEvent("react", onReactClick);
             })
             .catch(function() {
                 debugger;
@@ -742,7 +779,7 @@ registerInterface(function() {
                 i, j, el, container, orig;
 
             orig = data;
-            data = clone(data);
+            data = U.clone(data);
             // only use this ID the first time.
             delete orig.id
 
@@ -791,26 +828,62 @@ registerInterface(function() {
         /**
          * Notifies all players that a reaction has been used.
          */
-        onReactClicked = function(data) {
+        onReactClick = function(data) {
             sendHttpRequest(
-                "session/" + window.sessionId + "/player/" + data.id + "/react",
-                "POST"
+                "session/" + window.sessionId + "/broadcast",
+                "POST",
+                { message : { player_react : { id : data.id } } }
             );
             mobList.toggleReaction(data.id, false);
+            document.body.setAttribute("data-isMyReaction", "isMyReaction");
+            resetMenu(data);
+            unlockMenu();
+            onMoveSelected(data);
         };
 
         /**
-         * Displays a message that a reaction was used.
+         * Displays a message that a reaction was used, and suspends event until reaction is complete.
          */
         onReactionUsed = function(data) {
             var mob, message;
-            if (isEqual(data.player_id, window.playerId)) {
+            if (U.isEqual(data.id, window.playerId)) {
                 message = "You React!";
             } else {
-                mob = mobList.getMobData(data.player_id);
+                mob = mobList.getMobData(data.id);
                 message = mob.character_name + " Reacts!";
             }
             showAlert(_reactTemplate.replace("{message}", message), 1000);
+            if (document.body.hasAttribute("data-isMyTurn")) {
+                document.body.setAttribute("data-wasMyTurn", "wasMyTurn");
+                document.body.removeAttribute("data-isMyTurn");
+
+                // Switch off DM's TURN tab.
+                if (el = _menuEl.querySelector("#turnControlsTab")) {
+                    el.checked = false;
+                    el.classList.add("hiddenTab");
+                    _menuEl.querySelector("#dmControlTabs").setAttribute("data-tabs", 3);
+                }
+
+                offEvents("turn");
+                combatMap.removeMapEvents();
+            }
+        };
+
+        /**
+         * After a mob has finished reacting, whoever's turn it was can continue.
+         */
+        onReactionComplete = function(data) {
+            var self;
+            if (document.body.hasAttribute("data-wasMyTurn")) {
+                document.body.setAttribute("data-isMyTurn", "isMyTurn");
+                document.body.removeAttribute("data-wasMyTurn");
+
+                unlockMenu();
+
+                self = mobList.getCurrent()
+                onMoveSelected(self);
+                onEvent("[name='done']", "click", onDoneClick.bind({}, self), "turn");
+            }
         };
 
         var public = {
@@ -819,7 +892,7 @@ registerInterface(function() {
             onMessageReceived : onMessageReceived,
             relocateMob: relocateMob,
             toggleMob: toggleMob,
-            onReactClicked: onReactClicked,
+            onReactClick: onReactClick,
             triggerNextTurn: triggerNextTurn
         }
 

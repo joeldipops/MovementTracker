@@ -385,7 +385,11 @@ body {
         body[data-state="combat"][data-isDm] .initiativeList > li[data-initiative] > [name='toggleMob'],
         body[data-state="combat"][data-isDm] .initiativeList > li[data-initiative]:not(.currentTurn) > [name='setTurn'] { display: inline-block; }
 
-    body[data-state='combat']:not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
+    body[data-state='combat']:not([data-isMyReaction]):not([data-isMyTurn]):not([data-isDm]) #controls > * { display: none; }
+
+    /* subset of controls can be seen if you take a reaction */
+    body[data-state='combat'][data-isMyReaction] #controls .extraDash { display: none; }
+    body[data-state='combat'][data-isMyReaction] #controls [name='done'] { margin-left: 0; }
 
 
 .ctrl-combatCell {
